@@ -46,7 +46,7 @@ class more_taxonomies_settings extends more_plugins_common_object_beta {
 		return true;
 	}
 	function read_data() {
-		global $more_taxonomies;
+		global $more_taxonomies, $wp_taxonomies;
 
 		$data = $more_taxonomies->read_data();
 
