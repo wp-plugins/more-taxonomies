@@ -14,7 +14,7 @@ This is an early beta - fixes and better documentation to come. Promise.
 
 == Installation ==
 
-To install More Fields:
+To install More Taxonomies:
 
 1. Upload the 'more-taxonomies' folder to the `/wp-content/plugins/` directory
 1. Activate the plugin through the 'Plugins' menu in WordPress
