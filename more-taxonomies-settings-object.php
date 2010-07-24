@@ -1,33 +1,23 @@
 <?php
 
-class more_taxonomies_settings extends more_plugins_common_object_beta {
+class more_taxonomies_admin extends more_plugins_admin_object_sputnik_3 {
 
 	function validate_sumbission() {
 		if ($this->action == 'save') {
-		
-			// Set the index to save to
-			$name = sanitize_title($_POST['singular_label']);
-
-			/*
-			if (array_key_exists($name, $this->data)) {
-				$this->set_navigation('taxonomy');
-				return $this->error(__('This taxonomy already exists!', 'more-plugins'));
-			}
-			*/
-		
-			$a = attribute_escape($_POST['label']);
-			$b = attribute_escape($_POST['singular_label']);
+				
+			$a = attribute_escape($_POST['labels,name']);
+			$b = attribute_escape($_POST['labels,singular_name']);
 			if (!$a && !$b) {
 				$this->set_navigation('taxonomy');
 				return $this->error(__('You need both a plural and singular label for the taxonomy!', 'more-plugins')); 
 			}
 			if (!$a) {
 				$this->set_navigation('taxonomy');
-				return $this->error(__('You need a name for the taxonomy!', 'more-plugins')); 
+				return $this->error(__('You need to enter a plural name for the taxonomy!', 'more-plugins')); 
 			}
 			if (!$b) {
 				$this->set_navigation('taxonomy');
-				return $this->error(__("You need a singular name for the taxonomy!", 'more-plugins')); 
+				return $this->error(__("You need to enter a singular name for the taxonomy!", 'more-plugins')); 
 			}
 			// Default slug
 			if (!$_POST['rewrite_base']) $_POST['rewrite_base'] = sanitize_title($a);
@@ -36,9 +26,8 @@ class more_taxonomies_settings extends more_plugins_common_object_beta {
 //			if ($name_old && $name_old != $name) {
 //				unset($this->data[$name_old]);
 //			}
-			$_POST['name'] = $name;
-
-
+			$defaults = array('Category' => 'category', 'Post Tags' => 'post_tag', 'Navigation Menu' => 'nav_menu', 'Category' => 'link_category');
+			$_POST['index'] = $this->get_index('labels,singular_name');
 
 		}
 		
@@ -48,11 +37,14 @@ class more_taxonomies_settings extends more_plugins_common_object_beta {
 	function read_data() {
 		global $more_taxonomies, $wp_taxonomies;
 
-		$data = $more_taxonomies->read_data();
+		return $more_taxonomies->load_data();
 
-		if (empty($data)) $data = $this->object_to_array($wp_taxonomies);
+		$data = $more_taxonomies->load_data();
+
+		if ($this->action != 'add') $this->data = $data;
 		
-		if ($data['link_category']) $data['link_category']['label'] = __('Link Categories');
+//		if (empty($data)) $data = $this->object_to_array($wp_taxonomies);		
+//		if ($data['link_category']) $data['link_category']['label'] = __('Link Categories');
 
 		return $data;
 		
@@ -61,12 +53,6 @@ class more_taxonomies_settings extends more_plugins_common_object_beta {
 		global $wp_taxonomies;
 		return $this->object_to_array($wp_taxonomies);
 	}	
-	function get_post_types() {
-		global $wp_post_types;
-		$ret = array();
-		foreach ($wp_post_types as $key => $pt) $ret[$key] = $pt->label;
-		return $ret;
-	}
 	function get_post_type_taxonomies() {
 		global $wp_post_types;
 		$arr = array();

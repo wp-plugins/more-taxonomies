@@ -1,8 +1,8 @@
 <?php
-$more_common = 'MORE_PLUGINS_COMMON_BETA';
+$more_common = 'MORE_PLUGINS_ADMIN_SPUTNIK_3';
 if (!defined($more_common)) {
 
- 	class more_plugins_common_object_beta {
+ 	class more_plugins_admin_object_sputnik_3 {
 		var $name, $slug, $settings_file, $dir, $options_url, $option_key, $data, $url;
 	
 		var $action, $navigation, $message, $error;
@@ -10,7 +10,7 @@ if (!defined($more_common)) {
 		**
 		**
 		*/
-		function more_plugins_common_object_beta ($settings) {
+		function more_plugins_admin_object_sputnik_3 ($settings) {
 
 			$this->name = $settings['name'];
 			$this->slug = sanitize_title($settings['name']);
@@ -18,12 +18,13 @@ if (!defined($more_common)) {
 			if (isset($settings['settings_file'])) 
 				$this->settings_file = $settings['settings_file'];
 			else $this->settings_file = $this->slug . '-settings.php';
-			$this->dir = WP_PLUGIN_DIR . '/' . $this->slug . '/';
-			$this->url = get_option('siteurl') . '/wp-content/plugins/' . $this->slug . '/';
+			$this->dir = plugin_dir_path($settings['file']); //WP_PLUGIN_DIR . '/' . $this->slug . '/';
+			$this->url = plugin_dir_url($settings['file']); //get_option('siteurl') . '/wp-content/plugins/' . $this->slug . '/';
 			$this->options_url = 'options-general.php?page=' . $this->slug;
 			$this->settings_url = $this->options_url;
 			$this->option_key = $settings['option_key'];
 			$this->default = $settings['default'];
+			$this->default_keys = ($a = $settings['default']) ? $a : array();
 
 			// Create Settins Menu
 			add_action('admin_menu', array(&$this, 'admin_menu'));
@@ -45,14 +46,33 @@ if (!defined($more_common)) {
 			
 			$this->add_actions();
 
+			$this->add_key = '57UPhPh';
+
 			// $this->data = $this->read_data();
 		}
 		function admin_init() {
-			$this->data = $this->read_data();
+
+			// Read in saved files	
+			$dir = WP_PLUGIN_DIR . '/' . $this->slug . '/saved/';
+			if (is_dir($dir)) {
+				$ls = scandir($dir);
+				$pts = array();
+				foreach ($ls as $l) if (strpos($l, '.php')) $pts[] = $l;
+				foreach ($pts as $file) require($dir . $file);
+				$this->data = $this->read_data();
+			}
 		}
 		function add_actions() {
-			// empty
+			// This function was intentionally left blank
 		}
+		function plugin_data() {
+			return get_option($this->option_key, array());
+		}
+		
+		/*
+		**
+		**	Add links to the Plugins page.
+		*/
 		function plugin_row_meta ($links, $file) {
 			if (strpos('padding' . $file, $this->slug)) {
 				$links[] = '<a href="' . $this->settings_url . '">' . __('Settings','more-plugins') . '</a>';
@@ -102,10 +122,15 @@ if (!defined($more_common)) {
 		function export_data() {
 			$this->options_page_wrapper_header();
 			$data = $this->get_data();
-			foreach (array_reverse($this->keys) as $key) $data = array($key => $data);
 			$function = str_replace('-', '_', $this->slug);
-			$export = '<?php ' . $function . '__(\'' . json_encode($data) . '\'); ?>';
-			$filename = implode('-', $this->keys) . '.php';
+			$filter = $function . '_saved';
+			$a = implode('-', $this->keys);
+			$a = $this->keys[1];
+			$f = $function . '_saved_' . $a;
+			$j = json_encode($data);
+			$export = "<?php \nadd_filter('$filter', '$f');\n";
+			$export .= "function $f (\$d) {\$d['$a'] = json_decode('$j', true); return \$d; }\n?>";
+			$filename = $a . '.php';
 			$dir = $this->dir . 'saved/';
 
 			if (false) {			
@@ -134,8 +159,19 @@ if (!defined($more_common)) {
 		**
 		**
 		*/
-		function get_data($s = array()) {
-			if (empty($s)) $s = $this->keys;
+		function data_subset ($args = array()) {
+			$ret = array();
+			foreach ($this->data as $key => $d) {
+				$exclude = false;
+				foreach ($args as $k => $a) 
+					if ($d[$k] != $a) $exclude = true;				
+				if (!$exclude) $ret[$key] = $d;				
+			}
+			return $ret;
+		
+		}
+		function get_data($s = array(), $override = false) {
+			if (empty($s) && !$override) $s = $this->keys;
 			if (count($s) == 0) return $this->data;
 			if (count($s) == 1) return $this->data[$s[0]];
 			if (count($s) == 2) return $this->data[$s[0]][$s[1]];
@@ -143,8 +179,8 @@ if (!defined($more_common)) {
 			if (count($s) == 4) return $this->data[$s[0]][$s[1]][$s[2]][$s[3]];
 			return $this->data;
 		}		
-		function set_data($value, $s = array()) {
-			if (empty($s)) $s = $this->keys;
+		function set_data($value, $s = array(), $override = false) {
+			if (empty($s) && !$override) $s = $this->keys;
 			if (count($s) == 0) $this->data = $value;
 			if (count($s) == 1) $this->data[$s[0]] = $value;
 			if (count($s) == 2) $this->data[$s[0]][$s[1]] = $value;
@@ -154,139 +190,210 @@ if (!defined($more_common)) {
 		}
 		function unset_data($s = array()) {
 			if (empty($s)) $s = $this->keys;
-			if (count($s) == 1) unset($this->data[$s[0]]);
-			if (count($s) == 2) unset($this->data[$s[0]][$s[1]]);
-			if (count($s) == 3) unset($this->data[$s[0]][$s[1]][$s[2]]);
-			if (count($s) == 4) unset($this->data[$s[0]][$s[1]][$s[2]][$s[3]]);
+			$key = array_pop($s);
+			$arr = $this->get_data($s, true);
+			unset($arr[$key]);
+			$this->set_data($arr, $s, true);
 			return $this->data;
 		}
+		
+		/*
+		**	settings_init()
+		**
+		**	Extract variables that define what we're trying to do.
+		*/
+		function settings_init() {
+
+			// Single vars
+			$fs = array('action', 'navigation');
+			foreach ($fs as $f) $this->{$f} = attribute_escape($_GET[$f]);
+
+			// Array vars
+			$fs = array('keys', 'action_keys');
+			foreach ($fs as $f) {
+				$a = attribute_escape($_GET[$f]);
+				$argh = $this->extract_json_array($a);
+				$this->{$f} = $argh;
+			}
+
+			if (count($this->keys)) {
+
+				// Extract the last key
+				$last = $this->keys[count($this->keys) - 1];
+
+				// Are we trying to add stuff?
+				if ($last == $this->add_key) {
+					$this->data = $this->set_data($this->default, $this->keys);				
+				}
+
+			}
+
+			$this->read_data();
+			
+			return true;
+		}
+		/*
+		**
+		**	Parse requests...
+		*/
 		function request_handler () {
 		
-			// Ponce!
+			// Ponce som en lugercheck!
 			if ($nonce = attribute_escape($_GET['_wpnonce']))
 				check_admin_referer($this->nonce_action());
 
-			$keys = attribute_escape($_GET['keys']);
-			if ($keys) $this->keys = explode(',', $keys);
-			if (!$this->keys) $this->keys = array();
+// __d($this->data);
 
-if (0) {
-	echo '<pre>';
-	echo $id;
-	print_r($_GET);
-	print_r($_POST);
-	echo '</pre>';
-}
-			// Get basic parameters
-			//$this->selected = attribute_escape($_GET['id']);
-			// print_r($this->selected);
-			
-			$this->action = attribute_escape($_GET['action']);
-			$this->navigation = attribute_escape($_GET['navigation']);
-			$data = $this->read_data();
-
-
-			// Check whatever you want
+			// Check whatever you want - validate_submission should return false if 
+			// things don't stack up. 
 			if (!($this->validate_sumbission())) {
-				// If saving fails
 				if ($this->action == 'save') {
-					$temp_key = 'saving_temp';
-					$this->data[$temp_key] = $this->extract_submission();
-					$this->keys = $temp_key;
+					$this->set_data($this->extract_submission(), $this->keys);
 				}
 				return false;
 			}
 			
 			if ($this->navigation == 'export') {
-				$this->export_data();
+				return $this->export_data();
 			}
 			
 			if ($this->action == 'move') {
-				if ($move_keys = attribute_escape($_GET['move_keys'])) {
-					$move_keys = explode(',', $move_keys);
-				} else $move_keys = array();
+				$action_keys = $this->extract_json_array(attribute_escape($_GET['action_keys']));
 
-				$data = $this->get_data($move_keys);
-		
+				$data = $this->get_data($this->action_keys);
+				
 				if (empty($data)) {	
 					$this->error(__('Someting has gone awry. Sorry.', 'more-plugins'));
 					return false;
 				}
-				
 				$row = attribute_escape($_GET['row']);
-				$up = ('up' == attribute_escape($_GET['direction'])) ? true : false;
-				$data = $this->move_field($data, $row);
-				
-				$this->set_data($data, $move_keys, $up);
 
+				// Move a key
+				$up = ('up' == attribute_escape($_GET['direction'])) ? true : false;
+				$data = $this->move_field($data, $row, $up);
+				
+				// Save the data
+				$this->set_data($data, $this->action_keys);
 				$this->save_data($this->data);
 			}
 			if ($this->action == 'save') {
-			//	$arr = array();
-				
-				//if (!($name = attribute_escape($_POST['name']))) 
-				//	$_POST['name'] = sanitize_title();
-				
-				// The $_POST['name'] needs to be set externally, this is
-				// the key(s) to be used. 
+	
 				$arr = $this->extract_submission();
+				// The $_POST['index'] needs to be set externally, this is
+				// last index of the data to be saved 
+				$index = $arr['index'];
+				$keys  = $arr['originating_keys'];
 				
-				$name = attribute_escape($_POST['name']);
-				$originating_action = attribute_escape($_POST['originating_action']);
+				// We can only save to '_plugin'
+				if ($keys[0] != '_plugin') {
+					$keys[0] = '_plugin';
+				}
+				$old_last_key = $keys[count($keys) - 1];
 
-				$id = attribute_escape($_POST['id']);	
-
-				// Create the keys
-				$originating_keys = explode(',', attribute_escape($_POST['originating_keys']));
-				if ($originating_keys[0] == '') $originating_keys = array();
-
-				if ($originating_action == 'edit') {
-					$old = array_pop($originating_keys);
-
-					// If the item changed name
-					if ($old != $name) {
-						// $this->message = __('The name was changed!', 'more-plugins');
-						$this->unset_data($old_keys);
+			
+				// Is this not new stuff?
+				if ($index != $this->add_key) {
+					// Ok, so it's not new, but has it changed?
+					if ($old_last_key != $index) {
+						// The old keys are now redundant
+						$this->unset_data($keys);
 					}
 				}
-				// Set appropriate focus
-				array_push($originating_keys, $name);
-				$this->keys = $originating_keys;
+				
+				// Set the appropiate focus
+				array_pop($keys);
+				array_push($keys, $index);
+				unset($arr['originating_keys']);
 
-				if ($this->save_keys) $this->keys = $this->save_keys;
-								
-				if ($name) {
-					// $data[$name] = $arr;
-					$this->set_data($arr);
-					$this->save_data($this->data);
-					$this->message = __('Saved!');
+				// Set and save and provide feedback
+				if (count($keys) > 1) {
+					$this->set_data($arr, $keys);
+					$this->save_data();
+					$this->message = __('Saved!', 'more_plugins');
 				}
-			}
-			if ($this->action == 'add') {
-				$temp_key = 'default_option_temp';
-				$this->data[$temp_key] = $this->default;
-				array_push($this->keys, $temp_key);
-				// print_r($this->data);
+				return true;				
 			}
 			if ($this->action == 'delete') {
-				// unset($data[$this->selected]);
-				$this->unset_data();
-				$this->save_data($this->data);
+				$data = $this->unset_data($this->action_keys);
+				$this->save_data();
 				$this->message = __('Deleted!', 'more-plugins');
 			}
+			$this->read_data();
+			$this->after_request_handler();
+		}
+		function after_request_handler() {
+			/*
+			** This function is intentionally left blank
+			**
+			** Overwritten by indiviudal plugin admin objects, if needed - mostly
+			** used for cross more-plugins functionality
+			*/
 		}
 		function extract_submission() {
+
+			// Add required params
+			array_push($this->fields['array'], 'originating_keys');
+//			array_push($this->fields['var'], 'originating_action');
+//			array_push($this->fields['var'], 'name');
+			array_push($this->fields['var'], 'index');
+
+			// Ekkstrakkt
 			$arr = array();
-			
 			foreach($this->fields['var'] as $field) 
 				$arr[$field] = attribute_escape($_POST[$field]);
-			foreach($this->fields['array'] as $field) {
-				$arr[$field] = $_POST[$field];
-				if (!$_POST[$field]) $arr[$field] = array();
+			foreach($this->fields['array'] as $level1 => $field) {
+				if (!is_array($field)) {
+					$vals = $this->extract_json_array($_POST[$field]);
+					foreach ($vals as $v) $arr[$field][] = stripslashes($v);
+				} else {
+					foreach ($field as $level2 => $field2) {
+						$post = $this->extract_json_array($_POST[$level1 . ',' . $field2]);	
+						$arr[$level1][$field2] = stripslashes($post[0]);
+					}
+				}
 			}
 			return $arr;
 		}
+
+		/*
+		**
+		**
+		*/
+		function extract_json_array($a) {
+			// *Might* be storing values as json objects
+			if (!is_array($a) && $a) {
+				if ($b = json_decode(html_entity_decode(stripslashes($a)))) {
+					// Json is JS object notation (!), convert to array.
+					if (is_object($b)) $b = $this->object_to_array($b);
+					$a = $b;
+				// If the data is not an array, make it one
+				} else if (strpos($a, ',')) {
+					$ret = array();
+					foreach(explode(',', $a) as $p) $ret[] = $p;
+					$a = $ret;
+				} else {
+					$a = array($a);
+				}
+			}
+			//print_r($a);
+			// If there is no data in parameter, return empty
+			if (!$a) $a = array();
+			return $a;
+		}
 		
+		/*
+		**
+		**
+		*/
+		function stripslashes_deep ($string) {
+			while(strpos($string, '\\')) 
+				$string = stripslashes($string);
+			return $string;
+		}
+		/*
+		**
+		**
+		*/
 		function object_to_array($data) {
 			if (is_array($data) || is_object($data)) {
 				$result = array(); 
@@ -295,32 +402,31 @@ if (0) {
   			}
 			return $data;
 		}
-		function default_data() {
-			return array();
+		/*
+		**	Get the index name from the $_POST variable
+		**	to be used in validate_submission() in individual
+		**	settings classes.
+		**
+		*/		
+		function get_index($key) {
+			$val = attribute_escape($_POST[$key]);
+			$val = sanitize_title($val);
+			$val = str_replace('-', '_', $val);
+			return $val;		
 		}
-
 		/*
 		**
 		**
 		*/
 		function read_data() {
-		/*
-			if (empty($this->data) || !isset($this->data)) {
-				$this->data = get_option($this->option_key);
-			}
-			if (empty($this->data)) {
-				$this->data = $this->default_data();
-			}
-			return $this->data;
-		*/
 			return array();
 		}
 		/*
 		**
 		**
 		*/
-		function save_data($data) {
-			foreach ($data as $key => $d) if ($d['saved']) unset($data[$key]);
+		function save_data($data = array()) {
+			if (empty($data)) $data = $this->data['_plugin'];
 			update_option($this->option_key, $data);
 		}
 		
@@ -334,10 +440,20 @@ if (0) {
 			// Somthing
 			return true;
 		}
+
+		/*
+		**
+		**
+		*/
 		function error($error) {
 			$this->error = $error;
 			return false;
 		}
+
+		/*
+		**
+		**
+		*/
 		function set_navigation($navigation) {
 			$_GET['navigation'] = $navigation;
 			$_POST['navigation'] = $navigation;
@@ -353,7 +469,7 @@ if (0) {
 			$url = get_option('siteurl');
 			?>
 				<div class="wrap">
-				<div id="more-plugins" class="metabox-holder has-right-sidebar">		
+				<div id="more-plugins" class="metabox-holder has-right-sidebar <?php echo $this->slug; ?> <?php echo $this->slug . '-' . $this->navigation; ?>">		
 				
 					<div id="icon-options-general" class="icon32"><br /></div>
 					<h2><?php echo $this->name; ?></h2>
@@ -361,7 +477,7 @@ if (0) {
 					<div class="inner-sidebar">
 						<div id="side-sortables" class="meta-box-sortabless ui-sortable" style="position:relative;">
 				
-							<div id="more-fields-information" class="postbox">
+							<div id="<?php echo $this->slug; ?>-information" class="postbox">
 								<h3 class="hndle"><span><?php _e('About this Plugin', 'more-plugins'); ?>:</span></h3>
 								<div class="inside">
 								
@@ -377,9 +493,9 @@ if (0) {
 							
 							<div id="more-plugins-box" class="postbox">
 								<h3 class="hndle"><span>More Plugins:</span></h3>
-								<div class="inside">
+								<div class="inside plugin-install-php">
 								
-									<ul>
+									<ul class="action-links">
 										<li><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-fields&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Fields">More Fields</a></li>
 										<li><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-types&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Types">More Types</a></li>
 										<li><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-taxonomies&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Taxonomies">More Taxonomies</a></li>
@@ -452,7 +568,10 @@ if (0) {
 					?>
 						<label><input type="checkbox" name="<?php echo $name; ?>[]" value="<?php echo $key; ?>" <?php echo $checked; ?>> <?php echo $title2; ?></label>
 					<?php endforeach; ?>
+<?php /*
 					<input type="hidden" name="<?php echo $name; ?>_values" value="<?php implode(',', $arr); ?>">
+*/
+?>
 				</td>
 			</tr> 	
 			<?php
@@ -500,7 +619,6 @@ if (0) {
 				if ($ctr == $nbr + $offset) $new[$tmp_key] = $data[$tmp_key];
 				$ctr++;
 			}
-
 			return $new;
 
 		}
@@ -526,38 +644,19 @@ if (0) {
 		**
 		**
 		*/
-		function action_link($text, $action, $id, $extra = array()) {
-			$link = $this->options_url . 'action=' . $action . '&#38id='  . urlencode($id);
-
-			// Additional stuff
-			$link_extra = '&#38';
-			foreach ($extra as $key => $value) 
-				$link_extra .= $key . '=' . urlencode($value) . '&#38';
-			$link .= $link_extra;
-
-			// Add a default class
-			$class = 'more-common-' . $action;
-			$html = "<a class='$class' href='$link'>$text</a>";
-			return $html;
-		}
-		
-		/*
-		**
-		**
-		*/
 		function settings_link ($text, $args) {
 			$link = $this->options_url;
 			foreach ($args as $key => $value) {
 				if ($key == 'class') continue;
 				if (!$value) continue;
-				$link .= '&' . $key . '=' . $value;
+				if (is_array($value)) $value = implode(',', $value);
+				$link .= '&' . $key . '=' . urlencode($value);
 			}
 			$link = wp_nonce_url($link, $this->nonce_action($args));
 			$class = ($c = $args['class']) ? $c : 'more-common';
 			$html = "<a class='$class' href='$link'>$text</a>";
 			if (!$text) return $link;
 			return $html;
-		
 		}
 
 		/*
@@ -583,7 +682,7 @@ if (0) {
 			<table class="widefat">
 				<thead>
 					<tr>
-						<?php foreach ($titles as $title) : ?>
+						<?php foreach ((array) $titles as $title) : ?>
 						<th><?php echo $title; ?></th>
 						<?php endforeach; ?>
 					</tr>
@@ -601,7 +700,7 @@ if (0) {
 				</tbody>
 				<tfoot>
 					<tr>
-						<?php foreach ($titles as $title) : ?>
+						<?php foreach ((array) $titles as $title) : ?>
 						<th><?php echo $title; ?></th>
 						<?php endforeach; ?>
 					</tr>
@@ -615,10 +714,10 @@ if (0) {
 		**
 		*/
 		function table_row($contents, $nbr, $class = '') {
-			$class .= ($nbr++ % 2) ? '' : ' alternate ' ;
+			$class .= ($nbr++ % 2) ? ' alternate ' : '' ;
 			?>
 			<tr class="<?php echo $class; ?>">
-				<?php foreach ($contents as $content) : ?>
+				<?php foreach ((array) $contents as $content) : ?>
 				<td><?php echo $content; ?></td>
 				<?php endforeach; ?>
 			</tr>
@@ -643,21 +742,41 @@ if (0) {
 		}
 
 
-		function get_val($name, $s = array()) {
-			if (empty($s)) $s = $this->keys;
-			if (count($s) == 0) return $this->data[$name];
-			if (count($s) == 1) return $this->data[$s[0]][$name];
-			if (count($s) == 2) return $this->data[$s[0]][$s[1]][$name];
-			if (count($s) == 3) return $this->data[$s[0]][$s[1]][$s[2]][$name];
-			if (count($s) == 4) return $this->data[$s[0]][$s[1]][$s[2]][$s[3]][$name];
-			return $value;
+		function get_val($name, $k = array()) {
+			if (empty($k)) $k = $this->keys;
+			$s = array();
+
+			// Deal with comma separated keys 
+			foreach ((array) $k as $b) {
+				if (strpos($b, ',')) {
+					$c = explode(',', str_replace(' ', '', $b));
+					foreach($c as $d) $s[] = $d;
+				}
+				else $s[] = $b;
+			}
+
+			// Deal with comma separated field names			
+			if (strpos($name, ',')) {
+				$c = explode(',', str_replace(' ', '', $name));
+				foreach($c as $d) $s[] = $d;
+			} else $s[] = $name;
+
+			// Iterate through the data
+			$subdata = $this->data;
+			foreach ($s as $key) {
+				$subdata = $subdata[$key];
+			}
+			if (!is_array($subdata)) $subdata = htmlentities2($subdata);
+			return $subdata;
+		
+
 		}
 		/*
 		**
 		**
 		*/
-		function settings_input($name) {
-			$value = $this->get_val($name);			
+		function settings_input($name, $s = array()) {
+			$value = $this->get_val($name, $s);			
 			$html = "<input class='input-text' type='text' name='$name' value='$value'>";		
 			return $html;
 		}
@@ -682,6 +801,12 @@ if (0) {
 			}
 			return $html;
 		}
+		function settings_hidden($name) {
+			$value = $this->get_val($name);
+			if (is_array($value)) $value = json_encode($value);
+			$html = "<input type='hidden' name='$name' value='$value'>";
+			return $html;
+		}
 
 		/*
 		**
@@ -702,14 +827,20 @@ if (0) {
 		**
 		**
 		*/
-		function checkbox_list($name, $vars) {
+		function checkbox_list($name, $vars, $options = array()) {
 			$values = (array) $this->get_val($name);
 			$html = '';
 			foreach ($vars as $key => $val) {
 				$checked = (in_array($key, $values)) ? ' checked="checked"' : '';
-				$html .= "<label><input class='input-check' type='checkbox' value='$key' name='${name}[]' $checked> $val</label>";
+//				if (array_key_exists($key, $options)) {
+				$class = ($a = $options[$key]['class']) ? 'class="' . $a . '"' : '';
+				$readonly = ($options[$key]['disabled']) ? ' disabled="disabled"' : '';
+				if ($v = $options[$key]['value']) $checked = ' checked="checked" ';
+//				}
+				$html .= "<label><input class='input-check' type='checkbox' value='$key' name='${name}[]' $class $readonly $checked /> $val</label>";
+				if ($t = $options[$key]['text']) $html .= '<em>' . $t . '</em>';
 			}
-			$html .= '<input type="hidden" name="' . $name . '_values" value="' . implode(',', array_keys($vars)) . '">';
+		//	$html .= '<input type="hidden" name="' . $name . '_values" value="' . implode(',', array_keys($vars)) . '">';
 			return $html;		
 		}
 		
@@ -742,7 +873,7 @@ if (0) {
 			<input type="hidden" name="navigation" value="<?php echo $options['navigation']; ?>">
 			<input type="hidden" name="action" value="<?php echo $options['action']; ?>">
 			<p><input class="button-primary" type="submit" value="<?php echo $options['title']; ?>"></p>
-
+			</form>
 			<?php
 		
 		}
@@ -765,17 +896,7 @@ if (0) {
 		<?php
 		}
 
-		/*
-		**
-		**	The scripts we are using.
-		*/
-		function settings_init() {
 
-		//	wp_enqueue_style( 'plugin-install' );
-		//	wp_enqueue_script( 'plugin-install' );
-		//	add_thickbox();
-			// wp_enqueue_script('thickbox');
-		}
 
 		/*
 		**
@@ -787,19 +908,19 @@ if (0) {
 			//<![CDATA[
 				jQuery(document).ready(function($){
 					$("a.more-common-delete").click(function(){
-						return confirm("<?php _e('Are you sure you want to delete?'); ?>");
+						return confirm("<?php _e('Are you sure you want to 	delete?'); ?>");
 					});
-
 					$(".more-advanced-settings-toggle").click(function(){
 						$('div.more-advanced-settings').slideToggle();
 						return false;
 					});
-
 				});
 			//]]>
 			</script>
-			<?php
-			$css = $this->url . 'more-plugins/more-plugins.css';
+			<?php			
+				if (!defined('MORE_PLUGINS_DEV')) 
+					$css = $this->url . 'more-plugins/more-plugins.css';
+				else $css = WP_PLUGIN_URL . '/more-plugins.css';
 			?>
 				<link rel='stylesheet' type='text/css' href='<?php echo $css; ?>' />
 			<?php
@@ -809,7 +930,7 @@ if (0) {
 			$args = wp_parse_args($args, $defaults);
 			?>
 			<?php $url = $this->settings_link(false, $args); ?>
-			<form method="post" action="<?php echo $url; ?>">
+			<form method="post" action='<?php echo $url; ?>'>
 			<?php 
 		}
 		function format_comment($comment) {
@@ -817,21 +938,38 @@ if (0) {
 		}
 		function settings_save_button() {
 		?>
-			<input type="hidden" name="originating_action" value="<?php echo $_GET['action']; ?>" />
-			<input type="hidden" name="originating_keys" value="<?php echo $_GET['keys']; ?>" />
-			<input type="hidden" name="action" value="save" />
-			<input type="submit" class="button" value="<?php _e('Save', 'more-plugins'); ?>" />		
+			<input type="hidden" name='originating_action' value='<?php echo $_GET['action']; ?>' />
+			<input type="hidden" name='originating_keys' value='<?php echo $_GET['keys']; ?>' />
+			<input type="hidden" name='action' value='save' />
+			<input type="submit" class='button' value='<?php _e('Save', 'more-plugins'); ?>' />		
 			</form>
 
 		<?php
 		}
 		
+		function get_post_types() {
+			global $wp_post_types;
+			$ret = array();
+			foreach ($wp_post_types as $key => $pt) {
+				$name = ($t = $pt->labels->singular_name) ? $t : $pt->label;
+				$ret[$key] = $name;	
+			}
+	return $ret;
+		}		
 	} // end class
 
+
+
 } // endif defined
+
 define($more_common, true);
 
-
-
+if (!is_callable('__d')) {
+	function __d($d) {
+		echo '<pre>';
+		print_r($d);
+		echo '</pre>';	
+	}
+}
 
 ?>

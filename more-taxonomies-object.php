@@ -1,13 +1,23 @@
 <?php
 
 
-class more_taxonomies_object {
+class more_taxonomies_object extends more_plugins_object_sputnik_3 {
 	
 	var $settings;
 
-	function more_taxonomies_object ($settings) {
-		$this->settings = $settings;
-		add_action('init', array(&$this, 'load_taxonomies'));
+	function init ($settings) {
+		add_action('init', array(&$this, 'load_taxonomies'), 20);
+		add_action('init', array(&$this, 'set_default_data'), 1);
+		// Get modified post type array
+		add_action('init', array(&$this, 'set_modified_data'), 19);
+	}
+	function set_default_data() {
+		global $wp_taxonomies;
+		$this->data_default = $wp_taxonomies;		
+	}
+	function set_modified_data() {
+		global $wp_taxonomies;
+		$this->data_modified = $wp_taxonomies;	
 	}
 	/*
 	function load_data() {
@@ -22,17 +32,26 @@ class more_taxonomies_object {
 	function read_data() {
 		global $wp_taxonomies;
 
+		return $this->load_data();
+
 		$data = get_option($this->settings['option_key'], array());
+	
+		// Data save to file
+		$data = $this->saved_data($data);
+
+		// Data added eslewhere
+		if (!$this->wp_taxonomies) $this->wp_taxonomies = $wp_taxonomies;
+		$data = $this->elsewhere_data($data, $this->wp_taxonomies);
 		
 		return $data;
 	
 	}
 	function load_taxonomies() {	
 		global $wp_roles;
-		$data = $this->read_data();
+		$data = $this->get_data(array('_plugin_saved', '_plugin'));
 
 		// Give More Types priority
-		$plugins = get_option( 'active_plugins', array());
+		$plugins = get_option('active_plugins', array());
 		$more_types = 'more-types/more-types.php';
 
 		$caps = array(
@@ -42,7 +61,6 @@ class more_taxonomies_object {
 		);
 
 		foreach ($data as $name => $taxonomy) {
-				
 			foreach ($caps as $cap_key => $template) {
 				// Create the capability name
 				$capability = str_replace('%', $name, $template);
@@ -60,14 +78,14 @@ class more_taxonomies_object {
 			// Configure slug
 			if ($taxonomy['rewrite'] && ($slug = $taxonomy['rewrite_base'])) 
 				$taxonomy['rewrite'] = array('slug' => $slug);
-				
+
 			// If more types is installed don't associate with any particular post type. 
 			if (in_array($more_types, $plugins)) {
 				register_taxonomy($name, '', $taxonomy);
 			} else {
 				// Link taxonomy to particular objects
 				foreach ((array) $taxonomy['object_type'] as $type) {
-					register_taxonomy($name, '', $taxonomy);
+					register_taxonomy($name, $type, $taxonomy);
 				}
 			}
 		}
