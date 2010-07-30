@@ -1,45 +1,39 @@
 <?php
 /*
 Plugin Name: More Taxonomies
-Version: 1.0rc1
+Version: 1.0
 Author URI: http://labs.dagensskiva.com/
 Plugin URI: http://labs.dagensskiva.com/plugins/more-taxonomies/
-Description:  Add more taxonomies to your wordpress installation. 
+Description:  Add more taxonomies to your WordPress installation. You can use taxonomies to label and categorize your posts/pages.
 Author: Henrik Melin, Kal Ström
+License: GPL2
 
-	USAGE:
-
-	See http://labs.dagensskiva.com/plugins/more-taxonomies/
-
-	LICENCE:
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+	Copyright (C) 2010  Henrik Melin, Kal Ström
+	
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
+	
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+	
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
     
 */
 // Reset taxonomies
 if (0) update_option('more_taxonomies', array());
 
 
-
 // Plugin settings
 $fields = array(
-		'var' => array('hierarchical', 'public', 'label', 'singular_label', 'name', 'show_ui', 'rewrite', 'rewrite_base', 'show_tagcloud', 'query_var_bool', 'query_var', 'object_type'),
-		'array' => array('more_manage_cap', 'more_edit_cap', 'more_delete_cap', 'more_assign_cap', 'labels' => array('name', 'singular_name', 'search_items', 'popular_items', 'all_items', 'parent_item', 'parent_item_colon', 'edit_item', 'update_item', 'add_new_item', 'new_item_name', 'separate_items_with_commas', 'add_or_remove_items', 'choose_from_most_used'))
+		'var' => array('hierarchical', 'public', 'label', 'singular_label', 'name', 'show_ui', 'rewrite', 'rewrite_base', 'show_tagcloud', 'query_var_bool', 'query_var'),
+		'array' => array('object_type', 'more_manage_cap', 'more_edit_cap', 'more_delete_cap', 'more_assign_cap', 'labels' => array('name', 'singular_name', 'search_items', 'popular_items', 'all_items', 'parent_item', 'parent_item_colon', 'edit_item', 'update_item', 'add_new_item', 'new_item_name', 'separate_items_with_commas', 'add_or_remove_items', 'choose_from_most_used'))
 );
-
-
 
 $default = array(
 		'hierarchical' => true,

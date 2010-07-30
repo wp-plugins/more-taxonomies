@@ -29,10 +29,11 @@ class more_taxonomies_object extends more_plugins_object_sputnik_3 {
 	
 	}
 	*/
+	/*
 	function read_data() {
 		global $wp_taxonomies;
 
-		return $this->load_data();
+		return $this->load_objects();
 
 		$data = get_option($this->settings['option_key'], array());
 	
@@ -46,9 +47,10 @@ class more_taxonomies_object extends more_plugins_object_sputnik_3 {
 		return $data;
 	
 	}
+	*/
 	function load_taxonomies() {	
-		global $wp_roles;
-		$data = $this->get_data(array('_plugin_saved', '_plugin'));
+		global $wp_roles, $wp_taxonomies;
+		$data = $this->get_objects(array('_plugin_saved', '_plugin'));
 
 		// Give More Types priority
 		$plugins = get_option('active_plugins', array());
@@ -61,7 +63,9 @@ class more_taxonomies_object extends more_plugins_object_sputnik_3 {
 		);
 
 		foreach ($data as $name => $taxonomy) {
+		
 			foreach ($caps as $cap_key => $template) {
+			
 				// Create the capability name
 				$capability = str_replace('%', $name, $template);
 
@@ -75,19 +79,24 @@ class more_taxonomies_object extends more_plugins_object_sputnik_3 {
 						$wp_roles->add_cap($role, $capability);
 			}	
 		
+		
+			// If this post type has a ancestor key, then
+			// we need to remove it (it's been overridden).
+			if ($k = $taxonomy['ancestor_key']) unset($wp_taxonomies[$k]);
+			
 			// Configure slug
 			if ($taxonomy['rewrite'] && ($slug = $taxonomy['rewrite_base'])) 
 				$taxonomy['rewrite'] = array('slug' => $slug);
 
 			// If more types is installed don't associate with any particular post type. 
-			if (in_array($more_types, $plugins)) {
-				register_taxonomy($name, '', $taxonomy);
-			} else {
+			//if (in_array($more_types, $plugins)) {
+			//	register_taxonomy($name, '', $taxonomy);
+			//} else {
 				// Link taxonomy to particular objects
-				foreach ((array) $taxonomy['object_type'] as $type) {
-					register_taxonomy($name, $type, $taxonomy);
-				}
-			}
+				//foreach ((array) $taxonomy['object_type'] as $type) {
+					register_taxonomy($name, (array) $taxonomy['object_type'], $taxonomy);
+				//}
+			//}
 		}
 
 	}

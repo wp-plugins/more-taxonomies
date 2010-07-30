@@ -21,11 +21,7 @@ class more_taxonomies_admin extends more_plugins_admin_object_sputnik_3 {
 			}
 			// Default slug
 			if (!$_POST['rewrite_base']) $_POST['rewrite_base'] = sanitize_title($a);
-			// Handle change of name
-//			$name_old = sanitize_title($_POST['name']);
-//			if ($name_old && $name_old != $name) {
-//				unset($this->data[$name_old]);
-//			}
+
 			$defaults = array('Category' => 'category', 'Post Tags' => 'post_tag', 'Navigation Menu' => 'nav_menu', 'Category' => 'link_category');
 			$_POST['index'] = $this->get_index('labels,singular_name');
 
@@ -34,20 +30,10 @@ class more_taxonomies_admin extends more_plugins_admin_object_sputnik_3 {
 		// If all is OK
 		return true;
 	}
-	function read_data() {
-		global $more_taxonomies, $wp_taxonomies;
-
-		return $more_taxonomies->load_data();
-
-		$data = $more_taxonomies->load_data();
-
-		if ($this->action != 'add') $this->data = $data;
-		
-//		if (empty($data)) $data = $this->object_to_array($wp_taxonomies);		
-//		if ($data['link_category']) $data['link_category']['label'] = __('Link Categories');
-
-		return $data;
-		
+	function load_objects() {
+		global $more_taxonomies;
+		$this->data = $more_taxonomies->load_objects();
+		return $this->data;	
 	}
 	function default_data () {
 		global $wp_taxonomies;
@@ -61,6 +47,22 @@ class more_taxonomies_admin extends more_plugins_admin_object_sputnik_3 {
 
 		return $arr[$this->keys[0]];
 	}
+	
+	/*
+	**	after_request_handler()
+	**
+	**	Handles cross-functionality between More Types and More Fields - any changes
+	** 	made here are reflected in the More Types admin too.
+	*/
+	function after_request_handler() {
+		global $more_taxonomies, $more_types_settings;
+		if ($this->action == 'save') {	
+			if (is_callable(array($more_types_settings, 'update_from_more_plugin')))
+				$more_types_settings->update_from_more_plugin($more_taxonomies, 'object_type', 'taxonomies');
+		}
+	}	
+	
+	
 	
 } // End class
 
