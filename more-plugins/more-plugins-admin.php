@@ -1,4 +1,50 @@
 <?php
+/*
+
+	MORE_PLUGINS_ADMIN_OBJECT
+	SPUTNIK Release #3
+
+	This plugin compontent is common for all More Plugins (see more-plugins.se for 
+	more information about these plugins) and does most of all the heavy lifting 
+	that is required when creating, editing and deleting data. This object does not 
+	care what that data is, as long as the data adheres to some rules.
+	
+	1. 	There is onlye one data array contains all the data (per plugin). Within this 
+		array, there are 4 types of data, each with their own key.
+		- ${data}['_plugin']
+			This is the data actually stored in the options table in the WP data-base
+			for this plugin. New data is created here, and must exist here to be edited. 
+		- ${data}['_plugin_saved']
+			A feature of more plugins is to save individual features to a file, which can
+			be exported to other installations. Objects read in from file are stored here.
+		- ${data}['_other']
+			This is data created in function.php or by other plugins. 
+		- ${data}['_default']
+			This is data that is native to WordPress, e.g. Post and Types for the case of
+			post types.
+	
+	2. The $_GET variable 'navigation' 
+
+
+
+	Copyright (C) 2010  Henrik Melin, Kal Strm
+	
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
+	
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+	
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+*/
+
 $more_common = 'MORE_PLUGINS_ADMIN_SPUTNIK_3';
 if (!defined($more_common)) {
 
@@ -35,7 +81,10 @@ if (!defined($more_common)) {
 			
 			// Add JS & css on settings page
 			add_action('admin_head-settings_page_' . $this->slug, array(&$this, 'settings_head'));
-			add_action('admin_print_scripts-settings_page_' . $this->slug, array(&$this, 'settings_init'));
+			// add_action('admin_print_scripts-settings_page_' . $this->slug, array(&$this, 'settings_init'));
+			
+			add_action('load-settings_page_' . $this->slug, array(&$this, 'settings_init'));
+			// add_action('admin_init', array(&$this, 'settings_init'), 50);
 			
 			add_filter('plugin_row_meta', array(&$this, 'plugin_row_meta'), 10, 2);
 
@@ -51,16 +100,28 @@ if (!defined($more_common)) {
 			// $this->data = $this->read_data();
 		}
 		function admin_init() {
-
+/*
 			// Read in saved files	
 			$dir = WP_PLUGIN_DIR . '/' . $this->slug . '/saved/';
 			if (is_dir($dir)) {
-				$ls = scandir($dir);
+			
+				// Pre PHP 5 compatablity
+				if (is_callable('scandir'))
+					$ls = scandir($dir);
+				else {
+					$ls = array();
+					$dh  = opendir($dir);
+					while (false !== ($filename = readdir($dh))) {
+						if ($filename[0] != '.') $ls[] = $filename;
+					}
+				}
+				
 				$pts = array();
 				foreach ($ls as $l) if (strpos($l, '.php')) $pts[] = $l;
 				foreach ($pts as $file) require($dir . $file);
-				$this->data = $this->read_data();
+				$this->data = $this->load_objects();
 			}
+			*/	
 		}
 		function add_actions() {
 			// This function was intentionally left blank
@@ -94,7 +155,8 @@ if (!defined($more_common)) {
 		**
 		**
 		*/
-		function admin_head () {		
+		function admin_head () {
+			add_thickbox();
 		
 		}
 		
@@ -124,12 +186,12 @@ if (!defined($more_common)) {
 			$data = $this->get_data();
 			$function = str_replace('-', '_', $this->slug);
 			$filter = $function . '_saved';
-			$a = implode('-', $this->keys);
-			$a = $this->keys[1];
+			$k = $this->keys[1];
+			$a = str_replace('-', '_', $k);
 			$f = $function . '_saved_' . $a;
 			$j = json_encode($data);
 			$export = "<?php \nadd_filter('$filter', '$f');\n";
-			$export .= "function $f (\$d) {\$d['$a'] = json_decode('$j', true); return \$d; }\n?>";
+			$export .= "function $f (\$d) {\$d['$k'] = json_decode('$j', true); return \$d; }\n?>";
 			$filename = $a . '.php';
 			$dir = $this->dir . 'saved/';
 
@@ -192,7 +254,7 @@ if (!defined($more_common)) {
 			if (empty($s)) $s = $this->keys;
 			$key = array_pop($s);
 			$arr = $this->get_data($s, true);
-			unset($arr[$key]);
+			if ($arr[$key]) unset($arr[$key]);
 			$this->set_data($arr, $s, true);
 			return $this->data;
 		}
@@ -216,39 +278,41 @@ if (!defined($more_common)) {
 				$this->{$f} = $argh;
 			}
 
-			if (count($this->keys)) {
-
-				// Extract the last key
-				$last = $this->keys[count($this->keys) - 1];
-
-				// Are we trying to add stuff?
-				if ($last == $this->add_key) {
-					$this->data = $this->set_data($this->default, $this->keys);				
-				}
-
-			}
-
-			$this->read_data();
+			$this->after_settings_init();
 			
 			return true;
 		}
+		function after_settings_init() {
+			/*
+			** This function is intentionally left blank
+			**
+			** Overwritten by indiviudal plugin admin objects, if needed.
+			*/
+		}
+		
 		/*
 		**
 		**	Parse requests...
 		*/
 		function request_handler () {
+
+			// Load up our data, internal and external
+			$this->load_objects();
 		
 			// Ponce som en lugercheck!
 			if ($nonce = attribute_escape($_GET['_wpnonce']))
 				check_admin_referer($this->nonce_action());
 
-// __d($this->data);
-
 			// Check whatever you want - validate_submission should return false if 
 			// things don't stack up. 
 			if (!($this->validate_sumbission())) {
 				if ($this->action == 'save') {
-					$this->set_data($this->extract_submission(), $this->keys);
+					$keys = $this->keys;
+					if (!empty($this->action_keys)) {
+						$keys = $this->action_keys;
+						$this->keys = $keys;
+					}
+					$this->set_data($this->extract_submission(), $keys);
 				}
 				return false;
 			}
@@ -258,23 +322,26 @@ if (!defined($more_common)) {
 			}
 			
 			if ($this->action == 'move') {
+			
+				// At what level are we moving?
 				$action_keys = $this->extract_json_array(attribute_escape($_GET['action_keys']));
+				if (empty($action_keys)) array_push($action_keys, '_plugin');
+				$data = $this->get_data($action_keys);
 
-				$data = $this->get_data($this->action_keys);
+				if (empty($data))
+					return $this->error(__('Someting has gone awry. Sorry.', 'more-plugins'));
 				
-				if (empty($data)) {	
-					$this->error(__('Someting has gone awry. Sorry.', 'more-plugins'));
-					return false;
-				}
+				// Which element is being moved?
 				$row = attribute_escape($_GET['row']);
 
 				// Move a key
 				$up = ('up' == attribute_escape($_GET['direction'])) ? true : false;
 				$data = $this->move_field($data, $row, $up);
-				
+
 				// Save the data
-				$this->set_data($data, $this->action_keys);
-				$this->save_data($this->data);
+				$this->set_data($data, $action_keys);
+				$this->save_data();
+				
 			}
 			if ($this->action == 'save') {
 	
@@ -283,12 +350,13 @@ if (!defined($more_common)) {
 				// last index of the data to be saved 
 				$index = $arr['index'];
 				$keys  = $arr['originating_keys'];
+				$old_last_key = $keys[count($keys) - 1];
 				
 				// We can only save to '_plugin'
 				if ($keys[0] != '_plugin') {
+					$arr['ancestor_key'] = $keys[1];
 					$keys[0] = '_plugin';
 				}
-				$old_last_key = $keys[count($keys) - 1];
 
 			
 				// Is this not new stuff?
@@ -299,7 +367,6 @@ if (!defined($more_common)) {
 						$this->unset_data($keys);
 					}
 				}
-				
 				// Set the appropiate focus
 				array_pop($keys);
 				array_push($keys, $index);
@@ -311,14 +378,25 @@ if (!defined($more_common)) {
 					$this->save_data();
 					$this->message = __('Saved!', 'more_plugins');
 				}
-				return true;				
 			}
 			if ($this->action == 'delete') {
 				$data = $this->unset_data($this->action_keys);
 				$this->save_data();
 				$this->message = __('Deleted!', 'more-plugins');
 			}
-			$this->read_data();
+
+			if (count($this->keys) && $this->action == 'add') {
+
+				// Extract the last key
+				$last = $this->keys[count($this->keys) - 1];
+
+				// Are we trying to add stuff?
+				if ($last == $this->add_key) {
+					$this->data = $this->set_data($this->default, $this->keys);				
+				}
+
+			}
+			
 			$this->after_request_handler();
 		}
 		function after_request_handler() {
@@ -333,9 +411,9 @@ if (!defined($more_common)) {
 
 			// Add required params
 			array_push($this->fields['array'], 'originating_keys');
-//			array_push($this->fields['var'], 'originating_action');
-//			array_push($this->fields['var'], 'name');
 			array_push($this->fields['var'], 'index');
+			array_push($this->fields['var'], 'ancestor_key');
+
 
 			// Ekkstrakkt
 			$arr = array();
@@ -344,11 +422,15 @@ if (!defined($more_common)) {
 			foreach($this->fields['array'] as $level1 => $field) {
 				if (!is_array($field)) {
 					$vals = $this->extract_json_array($_POST[$field]);
-					foreach ($vals as $v) $arr[$field][] = stripslashes($v);
+					foreach ($vals as $k => $v) {
+						if (!is_array($v) && !is_object($v)) 
+							$arr[$field][$k] = htmlentities(stripslashes($v));
+						else $arr[$field][$k] = $this->object_to_array($v);
+					}
 				} else {
 					foreach ($field as $level2 => $field2) {
 						$post = $this->extract_json_array($_POST[$level1 . ',' . $field2]);	
-						$arr[$level1][$field2] = stripslashes($post[0]);
+						$arr[$level1][$field2] = htmlentities(stripslashes($post[0]));
 					}
 				}
 			}
@@ -418,9 +500,11 @@ if (!defined($more_common)) {
 		**
 		**
 		*/
+/*
 		function read_data() {
 			return array();
 		}
+*/
 		/*
 		**
 		**
@@ -478,7 +562,7 @@ if (!defined($more_common)) {
 						<div id="side-sortables" class="meta-box-sortabless ui-sortable" style="position:relative;">
 				
 							<div id="<?php echo $this->slug; ?>-information" class="postbox">
-								<h3 class="hndle"><span><?php _e('About this Plugin', 'more-plugins'); ?>:</span></h3>
+								<h3 class="hndle"><span><?php _e('About this Plugin', 'more-plugins'); ?></span></h3>
 								<div class="inside">
 								
 									<ul>
@@ -492,15 +576,49 @@ if (!defined($more_common)) {
 							</div>
 							
 							<div id="more-plugins-box" class="postbox">
-								<h3 class="hndle"><span>More Plugins:</span></h3>
+								<h3 class="hndle"><span>More Plugins</span> <em><?php _e('Get More out of WordPress', 'more-plugins'); ?></em></h3>
 								<div class="inside plugin-install-php">
 								
 									<ul class="action-links">
-										<li><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-fields&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Fields">More Fields</a></li>
-										<li><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-types&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Types">More Types</a></li>
-										<li><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-taxonomies&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Taxonomies">More Taxonomies</a></li>
-										<!--<li><a href="#">More Thumbnails</a></li>-->
-										<!--<li><a href="#">More Roles</a></li>-->
+									
+									<!-- MORE FIELDS -->
+										<li class="more-fields">
+											<dl>
+									<?php if (is_plugin_active('more-fields/more-fields.php')) : ?>
+												<dt><a href="options-general.php?page=more-fields">More Fields</a></dt>
+									<?php else : ?>									
+												<dt><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-fields&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Fields">More Fields</a></dt>
+									<?php endif; ?>
+												<dd><?php _e('Adds more input boxes to the Write/Edit screen for any post type.', 'more-plugins'); ?></dd>
+											</dl>
+										</li>
+										
+									<!-- MORE TYPES -->
+										<li class="more-types">
+											<dl>
+									<?php if (is_plugin_active('more-types/more-types.php')) : ?>
+												<dt><a href="options-general.php?page=more-types">More Types</a></dt>
+									<?php else : ?>									
+												<dt><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-types&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Types">More Types</a></dt>
+									<?php endif; ?>
+												<dd><?php _e('Adds more post types to your WordPress installation.', 'more-plugins'); ?></dd>
+											</dl>
+										</li>
+									
+									<!-- MORE TAXONOMIES -->
+										<li class="more-taxonomies">
+											<dl>
+									<?php if (is_plugin_active('more-taxonomies/more-taxonomies.php')) : ?>
+												<dt class="more-taxonomies"><a href="options-general.php?page=more-taxonomies">More Taxonomies</a></dt>
+									<?php else : ?>									
+												<dt class="more-taxonomies"><a href="<?php echo $url; ?>/wp-admin/plugin-install.php?tab=plugin-information&#38;plugin=more-taxonomies&#38;TB_iframe=true&#38;width=640&#38;height=679" class="thickbox" title="Install More Taxonomies">More Taxonomies</a></dt>
+									<?php endif; ?>
+												<dd class="more-taxonomies"><?php _e('Add new taxonomies - means by which to classify your posts and pages. ', 'more-plugins'); ?></dd>
+											</dl>
+										</li>
+
+										<!--<li class="more-thumbnails"><a href="#">More Thumbnails</a></li>-->
+										<!--<li class="more-roles"><a href="#">More Roles</a></li>-->
 									</ul>
 							
 								</div>
@@ -568,10 +686,6 @@ if (!defined($more_common)) {
 					?>
 						<label><input type="checkbox" name="<?php echo $name; ?>[]" value="<?php echo $key; ?>" <?php echo $checked; ?>> <?php echo $title2; ?></label>
 					<?php endforeach; ?>
-<?php /*
-					<input type="hidden" name="<?php echo $name; ?>_values" value="<?php implode(',', $arr); ?>">
-*/
-?>
 				</td>
 			</tr> 	
 			<?php
@@ -766,7 +880,7 @@ if (!defined($more_common)) {
 			foreach ($s as $key) {
 				$subdata = $subdata[$key];
 			}
-			if (!is_array($subdata)) $subdata = htmlentities2($subdata);
+			if (!is_array($subdata)) $subdata = stripslashes($subdata);
 			return $subdata;
 		
 
@@ -830,13 +944,16 @@ if (!defined($more_common)) {
 		function checkbox_list($name, $vars, $options = array()) {
 			$values = (array) $this->get_val($name);
 			$html = '';
+			
 			foreach ($vars as $key => $val) {
-				$checked = (in_array($key, $values)) ? ' checked="checked"' : '';
-//				if (array_key_exists($key, $options)) {
+				// Options will over-ride values
 				$class = ($a = $options[$key]['class']) ? 'class="' . $a . '"' : '';
 				$readonly = ($options[$key]['disabled']) ? ' disabled="disabled"' : '';
-				if ($v = $options[$key]['value']) $checked = ' checked="checked" ';
-//				}
+				
+				if (array_key_exists('value', (array) $options[$key]))
+					$checked = ($options[$key]['value']) ? ' checked="checked" ' : '';
+				else $checked = (in_array($key, $values)) ? ' checked="checked"' : '';
+				
 				$html .= "<label><input class='input-check' type='checkbox' value='$key' name='${name}[]' $class $readonly $checked /> $val</label>";
 				if ($t = $options[$key]['text']) $html .= '<em>' . $t . '</em>';
 			}
@@ -865,7 +982,6 @@ if (!defined($more_common)) {
 		/*
 		**
 		**
-		*/
 		function add_button ($options) {
 			?>
 			<form method="GET" ACTION="<?php echo $this->options_url; ?>">
@@ -877,6 +993,7 @@ if (!defined($more_common)) {
 			<?php
 		
 		}
+		*/
 		
 		/*
 		**
@@ -937,9 +1054,10 @@ if (!defined($more_common)) {
 			return '<em>' . $comment . '</em>';
 		}
 		function settings_save_button() {
+			$keys = implode(',', $this->keys);
 		?>
-			<input type="hidden" name='originating_action' value='<?php echo $_GET['action']; ?>' />
-			<input type="hidden" name='originating_keys' value='<?php echo $_GET['keys']; ?>' />
+			<input type="hidden" name='ancestor_key' value='<?php echo $this->get_val("ancestor_key"); ?>' />
+			<input type="hidden" name='originating_keys' value='<?php echo $keys; ?>' />
 			<input type="hidden" name='action' value='save' />
 			<input type="submit" class='button' value='<?php _e('Save', 'more-plugins'); ?>' />		
 			</form>
@@ -954,8 +1072,18 @@ if (!defined($more_common)) {
 				$name = ($t = $pt->labels->singular_name) ? $t : $pt->label;
 				$ret[$key] = $name;	
 			}
-	return $ret;
-		}		
+			return $ret;
+		}
+		function permalink_warning() {
+			global $wp_rewrite;
+			if (empty($wp_rewrite->permalink_structure)) {
+				$html = '<em class="warning">';
+				$html .= __('Permalinks are currently not enabled! To use this feature, enable permalinks in the <a href="options-permalink.php">Permalink Settings</a>.', 'more-plugins');			
+				$html .= '</em>';
+				return $html;
+			}
+			else return '';
+		}
 	} // end class
 
 
