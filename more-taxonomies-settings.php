@@ -1,6 +1,6 @@
 <?php
 
-global $more_taxonomies, $more_taxonomies_settings, $wp_taxonomies;
+global $more_taxonomies, $more_taxonomies_settings, $more_types_settings;
 
 
 if (!$this->navigation || $this->navigation == 'taxonomies') {
@@ -12,30 +12,26 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 	$defaults = array('category', 'post_tag', 'nav_menu', 'link_category'); //array_keys($more_taxonomies_settings->default_data());
 
 	$titles = array('Taxonomy', 'Actions');
-	$nbr = 0;
-	
-	
-	
-	//$data_stored = $more_taxonomies_settings->data_subset(array('file' => false));
-	//$data_file = $more_taxonomies_settings->data_subset(array('file' => true));
-	
+		
 	$taxs = $more_taxonomies_settings->data;
 	
 //	__d($taxs);
-	
+	$ancestor_keys = array();
+	$nbr = 0;
 	$title = __('Taxonomies create with More Taxonomies', 'more-plugins'); 
 	$caption = __('Taxonomies created here', 'more-plugins');
 	$more_taxonomies_settings->table_header($titles);
 	echo '<caption><h3>' . $title . '</h3><p>' . $caption . '</p></caption>';
 	foreach ((array) $taxs['_plugin'] as $name => $tax) {
+		if ($a = $tax['ancestor_key']) $ancestor_keys[] = $a;
 		$label = $tax['labels']['singular_name'];
 		$keys = '_plugin,' . $name;
 		$class = (in_array($name, $defaults)) ? 'default-taxonomy' : '';
 		$data = array(
 				$more_taxonomies_settings->settings_link($label, array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)),	
-				$more_taxonomies_settings->settings_link('Edit', array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)) . ' | ' .
-				$more_taxonomies_settings->settings_link('Delete', array('action' => 'delete','action_keys' => $keys, 'class' => 'more-common-delete')) . ' | ' .
-				$more_taxonomies_settings->settings_link('Export', array('navigation' => 'export', 'keys' => $keys)) . 
+				$more_taxonomies_settings->settings_link(__('Edit', 'more-plugins'), array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)) . ' | ' .
+				$more_taxonomies_settings->settings_link(__('Delete', 'more-plugins'), array('action' => 'delete','action_keys' => $keys, 'class' => 'more-common-delete')) . ' | ' .
+				$more_taxonomies_settings->settings_link(__('Export', 'more-plugins'), array('navigation' => 'export', 'keys' => $keys)) . 
 				$more_taxonomies_settings->updown_link($nbr, count($taxs['_plugin']))
 			);
 		$more_taxonomies_settings->table_row($data, $nbr++, $class);
@@ -49,7 +45,7 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 
 	$new_key = '_plugin,'. $more_taxonomies_settings->add_key;
 	$options = array('action' => 'add', 'navigation' => 'taxonomy', 'keys' => $new_key, 'class' => 'button-primary');
-	echo '<p>' . $more_taxonomies_settings->settings_link('Add new Taxonomy', $options) . '</p>';
+	echo '<p>' . $more_taxonomies_settings->settings_link(__('Add new Taxonomy', 'more_plugins'), $options) . '</p>';
 
 
 	/*
@@ -62,14 +58,18 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 		echo '<caption><h3>' . $title . '</h3><p>' . $caption . '</p></caption>';
 		foreach ($taxs['_plugin_saved'] as $name => $tax) {
 			$keys = '_plugin_saved,' . $name;
-			$class = (array_key_exists($name, $taxs['_plugin'])) ? 'disabled' : '';
-			$label = $tax['label'];
+
+			// Is this overwritten?
+			$class = (in_array($name, $ancestor_keys)) ? 'disabled' : false;
+			if (!$class) $class = (array_key_exists($name, $taxs['_plugin'])) ? 'disabled' : false ;
+
+			$label = $tax['labels']['singular_name'];
 			$data = array(
 					$label,	
-					$more_taxonomies_settings->settings_link('Overwrite', array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)) . ' | ' .
-					$more_taxonomies_settings->settings_link('Export', array('navigation' => 'export', 'keys' => $keys)) 
+					$more_taxonomies_settings->settings_link(__('Override', 'more-plugins'), array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)) . ' | ' .
+					$more_taxonomies_settings->settings_link(__('Export', 'more-plugins'), array('navigation' => 'export', 'keys' => $keys)) 
 				);
-			if ($class) $data = array($label, 'Overwritten above');
+			if ($class) $data = array($label, __('Overridden above', 'more-plugins'));
 			$more_taxonomies_settings->table_row($data, $nbr++, $class);
 		}
 
@@ -85,14 +85,18 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 		$more_taxonomies_settings->table_header($titles);
 		echo '<caption><h3>' . $title . '</h3><p>' . $caption . '</p></caption>';
 		foreach ($taxs['_other'] as $name => $tax) {
-			$class = (array_key_exists($name, $taxs['_plugin'])) ? 'disabled' : '';
-			$label = $tax['label'];
+
+			// Is this overwritten?
+			$class = (in_array($name, $ancestor_keys)) ? 'disabled' : false;
+			if (!$class) $class = (array_key_exists($name, $taxs['_plugin'])) ? 'disabled' : false ;
+
+			$label = $tax['labels']['singular_name'];
 			$data = array(
 					$label,	
-					$more_taxonomies_settings->settings_link('Overwrite', array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => '_other,' . $name)) . ' | ' .
-					$more_taxonomies_settings->settings_link('Export', array('navigation' => 'export', 'keys' => '_other,' . $name)) 
+					$more_taxonomies_settings->settings_link(__('Overwrite', 'more-plugins'), array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => '_other,' . $name)) . ' | ' .
+					$more_taxonomies_settings->settings_link(__('Export', 'more-plugins'), array('navigation' => 'export', 'keys' => '_other,' . $name)) 
 				);
-			if ($class) $data = array($label, 'Overwritten above');
+			if ($class) $data = array($label, __('Overridden above', 'more-plugins'));
 			$more_taxonomies_settings->table_row($data, $nbr++, $class);
 		}
 
@@ -104,21 +108,24 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 	*/
 	if (!empty($taxs['_default'])) {
 		$title = __('Default WordPress taxonomies', 'more-plugins');
-		$caption = __('Taxonomies already built into WordPress', 'more-plugins');
+		$caption = __('Taxonomies already built into WordPress  Please note - when messing with these defaults, prepare to die (but then, we\'re all going to anyway, eventually).', 'more-plugins');
 		$more_taxonomies_settings->table_header($titles);
 		echo '<caption><h3>' . $title . '</h3><p>' . $caption . '</p></caption>';
 		foreach ($taxs['_default'] as $name => $tax) {
-			if (in_array($name, array('nav_menu', 'link_category'))) continue;
-			$class = (array_key_exists($name, $taxs['_plugin'])) ? 'disabled' : '';
+
+			// Is this overwritten?
+			$class = (in_array($name, $ancestor_keys)) ? 'disabled' : false;
+			if (!$class) $class = (array_key_exists($name, $taxs['_plugin'])) ? 'disabled' : false ;
+
 			$label = $tax['labels']['singular_name'];
 			$keys = '_default,' . $name;
 			$data = array(
 					$label,	
-					$more_taxonomies_settings->settings_link('Overwrite', array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)) . ' | ' .
-					$more_taxonomies_settings->settings_link('Export', array('navigation' => 'export', 'keys' => $keys)) 
+					$more_taxonomies_settings->settings_link(__('Override', 'more-plugins'), array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)) . ' | ' .
+					$more_taxonomies_settings->settings_link(__('Export', 'more-plugins'), array('navigation' => 'export', 'keys' => $keys)) 
 				);
 
-			if ($class == 'disabled') $data = array($label, 'Overwritten above');
+			if ($class == 'disabled') $data = array($label, __('Overwritten above', 'more-plugins'));
 			$more_taxonomies_settings->table_row($data, $nbr++, $class);
 		}
 
@@ -127,7 +134,6 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 
 } else if ($this->navigation == 'taxonomy') {
 
-	$taxs = $more_taxonomies->load_data();
 
 	// Set up the navigation
 	
@@ -167,8 +173,9 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 		if ($base = $more_taxonomies_settings->get_val('rewrite_base')) {
 			$comment .= ' ' . __('It is currently', 'more-plugins') . ' <code>' . get_option('siteurl') .  '/' . $base . '/</code>';
 		}
+		$pl = $more_taxonomies_settings->permalink_warning();
 		$comment = $more_taxonomies_settings->format_comment($comment);
-		$row = array(__('Taxonomy slug', 'more-plugins'), $more_taxonomies_settings->settings_input('rewrite_base') . $comment);
+		$row = array(__('Taxonomy slug', 'more-plugins'), $more_taxonomies_settings->settings_input('rewrite_base') . $comment . $pl);
 		$more_taxonomies_settings->setting_row($row);
 
 		$comment = __('\'No\' to prevent the taxonomy being listed in the Tag Cloud Widget.', 'more-plugins');
@@ -176,18 +183,35 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 		$row = array(__('Show tag cloud', 'more-plugins'), $more_taxonomies_settings->settings_bool('show_tagcloud') . $comment);
 		$more_taxonomies_settings->setting_row($row);
 
-		if (!is_plugin_active('more-types/more-types.php')) {
-			$comment = __('Taxonomies can only be associated with one post type.', 'more-plugins');
-			$types = $more_taxonomies_settings->get_post_types();
-			$comment = $more_taxonomies_settings->format_comment($comment);
-			$row = array(__('Available to', 'more-plugins'), $more_taxonomies_settings->settings_radiobuttons('object_type', $types) . $comment);
-			$more_taxonomies_settings->setting_row($row);
-		} else {
-			$comment = sprintf(__('To link taxonomies to post types use %s!', 'more-plugins'), '<a href="options-general.php?page=more-types">More Types</a>');
-			$comment = $more_taxonomies_settings->format_comment($comment);
-			$row = array(__('Available to', 'more-plugins'), $comment);
-			$more_taxonomies_settings->setting_row($row);
+
+
+		$selected = $more_taxonomies_settings->get_val('object_type');
+
+		$id = $more_taxonomies_settings->keys[1];
+		$types = $more_taxonomies_settings->get_post_types();
+		$options = array();
+		if (is_object($more_types_settings)) {
+			$link = $more_types_settings->settings['options_url'];
+			$text = __("If you want to use this taxonomy for this post type you need to import it using <a href='$link'>More Types</a>.", 'more-plugins');
+			if (is_callable(array($more_types_settings, 'list_post_type_with_key')))
+				$options = $more_types_settings->list_post_type_with_key('taxonomies', $id, $text);
 		}
+//		__d($selected);
+//		__d($selected, $options);
+		
+		//$options = array();
+
+//		if (!is_plugin_active('more-types/more-types.php')) {
+			$comment = __('Select the post types which will use this taxonomy.', 'more-plugins');
+			$comment = $more_taxonomies_settings->format_comment($comment);
+			$row = array(__('Available to', 'more-plugins'), $more_taxonomies_settings->checkbox_list('object_type', $types) . $comment);
+			$more_taxonomies_settings->setting_row($row);
+//		} else {
+//			$comment = sprintf(__('To link taxonomies to post types use %s!', 'more-plugins'), '<a href="options-general.php?page=more-types">More Types</a>');
+//			$comment = $more_taxonomies_settings->format_comment($comment);
+//			$row = array(__('Available to', 'more-plugins'), $comment);
+//			$more_taxonomies_settings->setting_row($row);
+//		}
 	?>
 
 	</table>

@@ -1,5 +1,30 @@
 <?php
 
+/*
+**
+
+	This is the common object that all More Plugins. 
+
+
+	Copyright (C) 2010  Henrik Melin, Kal Ström
+	
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
+	
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+	
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+**
+*/
+
 $more_plugins = 'MORE_PLUGINS_SPUTNIK_3';
 if (!defined($more_plugins)) {
 	
@@ -14,9 +39,42 @@ if (!defined($more_plugins)) {
 			$this->data_default = array();
 			$this->data_modified = array();
 			$this->data_loaded = array();
+			
+			add_action('init', array(&$this, 'load_save_files'));
 		}
 		function init($settings) {
+		/*
+		** This function is intentionally left blank
+		**
+		** Overwritten by indiviudal plugin admin objects, if needed.
+		*/
 		}
+		function load_save_files () {
+
+			// Read in saved files	
+			$dir = plugin_dir_path($this->settings['file']) . 'saved/';
+
+			if (is_dir($dir)) {
+			
+				// Pre PHP 5 compatablity
+				if (is_callable('scandir'))
+					$ls = scandir($dir);
+				else {
+					$ls = array();
+					$dh  = opendir($dir);
+					while (false !== ($filename = readdir($dh))) {
+						if ($filename[0] != '.') $ls[] = $filename;
+					}
+				}
+				
+				$pts = array();
+				foreach ($ls as $l) if (strpos($l, '.php')) $pts[] = $l;
+				foreach ($pts as $file) require($dir . $file);
+				$this->data = $this->load_objects();
+			}
+		
+		}
+		
 		function object_to_array($data) {
 		
    			if (is_object($data)) $data = get_object_vars($data);
@@ -30,8 +88,8 @@ if (!defined($more_plugins)) {
 			return $data;
 		*/
 		}
-		function get_data($keys = array()) {
-			if (empty($this->data_loaded)) $this->data_loaded = $this->load_data();
+		function get_objects($keys = array()) {
+			if (empty($this->data_loaded)) $this->data_loaded = $this->load_objects();
 			if (!empty($keys)) {
 				$ret = array();
 				foreach ($keys as $key) {
@@ -43,14 +101,17 @@ if (!defined($more_plugins)) {
 			}
 			return $this->data_loaded;
 		}
-		function load_data($data = array()) {
-			$data['_plugin'] = get_option($this->settings['option_key'], array());
+		function load_objects($data = array()) {
+			$plugin =  get_option($this->settings['option_key'], array());
+			$data['_plugin'] = $this->object_to_array($plugin);
+			if (!$data['_plugin']) $data['_plugin'] = array();
 
-			$data['_plugin_saved'] = $this->saved_data();
-
+			$saved = $this->saved_data();
+			$data['_plugin_saved'] = $this->object_to_array($saved);
+			if (!$data['_plugin_saved']) $data['_plugin_saved'] = array();
 			foreach ((array) $this->data_modified as $key => $item) {
 				// Remove the defaults
-				if (array_key_exists($key, $this->data_default)) 
+				if (array_key_exists($key, (array) $this->data_default)) 
 					unset($this->data_modified[$key]);
 				/*
 				if (array_key_exists($key, $data['_plugin'])) 
@@ -59,8 +120,13 @@ if (!defined($more_plugins)) {
 					unset($this->data_modified[$key]);					
 				*/
 			}
+
 			$data['_other'] = $this->object_to_array($this->data_modified);
+			if (!$data['_other']) $data['_other'] = array();
+			
 			$data['_default'] = $this->object_to_array($this->data_default);
+			if (!$data['_default']) $data['_default'] = array();
+
 			$this->data_loaded = $data;
 			return $data;
 		
@@ -122,6 +188,16 @@ if (!defined($more_plugins)) {
 
 	
 	
+	}
+}
+
+if (!is_callable('__d')) {
+	function __d($d) {
+		if (!defined('MORE_PLUGINS_DEV')) return false;
+		if (!$d) return false;
+		echo '<pre>';
+		print_r($d);
+		echo '</pre>';
 	}
 }
 
