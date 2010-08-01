@@ -1,7 +1,7 @@
 <?php
 
 
-class more_taxonomies_object extends more_plugins_object_sputnik_3 {
+class more_taxonomies_object extends more_plugins_object_sputnik_4 {
 	
 	var $settings;
 

@@ -4,13 +4,13 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&#38;business=h.me
 Tags: taxonomies, cms, custom taxonomies, post types, admin, more fields, wordpress 3.0, more types, types, more taxonomies, taxonomy, tags, categories, custom, tag, category
 Requires at least: 3.0
 Tested up to: 3.0.1
-Stable tag: 1.0
+Stable tag: 1.0.1
 
 Add more taxonomies, besides categories or tags, to your WordPress installation. Also allows you to edit built in taxonomies.
 
 == Description ==
 
-More Taxonomies is a plugin that adds new taxonomies to the WordPress admin. For instance if you run a football site you could create a team taxonomy (non-hierarchical, like tags) and set teams on your posts relating to a specific game. If you run a music blog you could create taxonomies for artists, musicians or perhaps producers. This way you could be more specific in your posts.
+More Taxonomies is a plugin that adds new taxonomies to your WordPress installation, using an easy-to-use interface in the admin. For instance if you run a football site you could create a team taxonomy (non-hierarchical, like tags) and set teams on your posts relating to a specific game. If you run a music blog you could create taxonomies for artists, musicians or perhaps producers. In adding new taxonomies, you could be linking more specific information to your posts, enabling you access more relvant related posts and information.
 
 If you use [More Types](http://wordpress.org/extend/plugins/more-types/) in addition to More Taxonomies you could for instance add a hierarchical (like categories) taxonomy to a specific post type for courses—like appetizer, entrée, relevés, main course, salad or dessert.
 
@@ -33,6 +33,9 @@ To install More Taxonomies:
 1. Setup your new post types in Settings -> More Taxonomies
 
 == Changelog ==
+
+= 1.0.1 =
+* Updating to Sputnik #4 which fixes a number of bugs, most relevant here is the handling of UTF8 characters. 
 
 = 1.0 =
 * Capability to override WordPress defaults

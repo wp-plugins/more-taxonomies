@@ -1,6 +1,6 @@
 <?php
 
-class more_taxonomies_admin extends more_plugins_admin_object_sputnik_3 {
+class more_taxonomies_admin extends more_plugins_admin_object_sputnik_4 {
 
 	function validate_sumbission() {
 		if ($this->action == 'save') {
