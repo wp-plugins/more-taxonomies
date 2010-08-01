@@ -26,7 +26,6 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 		if ($a = $tax['ancestor_key']) $ancestor_keys[] = $a;
 		$label = $tax['labels']['singular_name'];
 		$keys = '_plugin,' . $name;
-		$class = (in_array($name, $defaults)) ? 'default-taxonomy' : '';
 		$data = array(
 				$more_taxonomies_settings->settings_link($label, array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)),	
 				$more_taxonomies_settings->settings_link(__('Edit', 'more-plugins'), array('navigation' => 'taxonomy', 'action' => 'edit', 'keys' => $keys)) . ' | ' .
@@ -34,11 +33,11 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 				$more_taxonomies_settings->settings_link(__('Export', 'more-plugins'), array('navigation' => 'export', 'keys' => $keys)) . 
 				$more_taxonomies_settings->updown_link($nbr, count($taxs['_plugin']))
 			);
-		$more_taxonomies_settings->table_row($data, $nbr++, $class);
+		$more_taxonomies_settings->table_row($data, $nbr++);
 	}
 	if (empty($taxs['_plugin'])) {
 		$data = array(__('No Taxonomies defined', ''), '');
-		$more_taxonomies_settings->table_row($data, $nbr++, $class);
+		$more_taxonomies_settings->table_row($data, $nbr++);
 	
 	}
 	$more_taxonomies_settings->table_footer($titles);
@@ -115,8 +114,7 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 
 			// Is this overwritten?
 			$class = (in_array($name, $ancestor_keys)) ? 'disabled' : false;
-			if (!$class) $class = (array_key_exists($name, $taxs['_plugin'])) ? 'disabled' : false ;
-
+			if (!$class) $class = (array_key_exists($name, $taxs['_plugin'])) ? 'disabled' : false;
 			$label = $tax['labels']['singular_name'];
 			$keys = '_default,' . $name;
 			$data = array(
@@ -332,22 +330,6 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 			$row = array(__("'Choose from most used' label", 'more-plugins'), $more_taxonomies_settings->settings_input('labels,choose_from_most_used') . $comment);
 			$more_taxonomies_settings->setting_row($row);
 
-			$labels = array(
-				// 'name' => '',
-				// 'singular_name' => '',
-				'search_items' => __('Search', 'more-plugins'),
-				'popular_items' => __('Popular', 'more-plugins'),
-				'all_items' => __('All', 'more-plugins'),
-				'parent_item' => __('Parent', 'more-plugins'),
-				'parent_item_colon' => __('Parent', 'more-plugins'),
-				'edit_item' => __('Edit', 'more-plugins'),
-				'update_item' => __('Update', 'more-plugins'),
-				'add_new_item' => __('Add New', 'more-plugins'),
-				'new_item_name' => __('New Name', 'more-plugins'),
-				'separate_items_with_commas' => __('Separate with commas', 'more-plugins'),
-				'add_or_remove_items' => __('Add or Remove', 'more-plugins'),
-				'choose_from_most_used' => __('Choose from the most commonly used', 'more-plugins'),
-			);
 		?>
 	
 		</table>
@@ -358,16 +340,5 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 
 	<?php
 }
-global $wp_post_types;
-
-	$arr = array();
-	foreach ($wp_post_types as $key => $type) $arr[$key] = $type->taxonomies;
-
-global $wp_plugins;
-	echo '<pre>';
-	//print_r($more_taxonomies_settings->data);
-	echo '</pre>';
-
-
 
 ?>
