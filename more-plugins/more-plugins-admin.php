@@ -1,14 +1,23 @@
 <?php
 /*
-
 	MORE_PLUGINS_ADMIN_OBJECT
-	SPUTNIK Release #3
-
+	SPUTNIK Release #4
+	
 	This plugin compontent is common for all More Plugins (see more-plugins.se for 
 	more information about these plugins) and does most of all the heavy lifting 
 	that is required when creating, editing and deleting data. This object does not 
 	care what that data is, as long as the data adheres to some rules.
 	
+	SETTINGS
+	========
+	name - Name of the plugin
+	option_key - The key that holds the plugin settings in the _options database table.
+	defaults - contains the default values when creating a new data item
+	fields - defines the keys that are extracted from $_POST when saving
+	file - should always be __FILE__ (so that we can get the plugin directory)
+	
+	DATA LAYOUT
+	===========
 	1. 	There is onlye one data array contains all the data (per plugin). Within this 
 		array, there are 4 types of data, each with their own key.
 		- ${data}['_plugin']
@@ -23,11 +32,32 @@
 			This is data that is native to WordPress, e.g. Post and Types for the case of
 			post types.
 	
-	2. The $_GET variable 'navigation' 
+	2. $_GET['navigation'] deterimines the view.
+	2. $this->keys is the keys of the data in 1) that is viewed, e.g. array('_plugin', 'news') or
+		array('_other', 'box', 'fields', 'title'). As a $_GET['keys'] variable it is imploded with a 
+		comma as the separator, e.g. '&keys=_other,box,fields,title'
+	3. $this->action determins what is about to happen
+	4. $this->action_keys is used when deleting stuff, as $this->key sets the navigation.
 
+	SAVING:
+	=======
+	- The fields that are to be saved are defined in the $this->fields, which contains 'var' for
+		single value variables and 'array' for variabels that can contain array values,
+		associative or just normal.
+	- Default values for creating new stuff is defined in $this->default. 
+	- In x-settings.php	keys that are deeper than 1, e.g. $data['one']['two'] are retrieved
+		as 'one,two'.
+	- $_POST['index'] sets the last key to save to. This needs to be set in 
+		validate_submission() in each plugins x-settings-object.php.
+	- $_POST['originating_keys'] defines where the request came from - used to
+		see of the name was changed. 
+	- For a key that contains deeper levels of data, the entire data contained within
+		that key must be defined in $_POST. E.g. for More Fields, the entire 'fields' key
+		must be defined in $_POST when saving the box. This is done with $this->settings_hidden(),
+		which will seralize any array data.
+	
 
-
-	Copyright (C) 2010  Henrik Melin, Kal Strm
+	Copyright (C) 2010  Henrik Melin, Kal Ström
 	
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -45,10 +75,10 @@
 
 */
 
-$more_common = 'MORE_PLUGINS_ADMIN_SPUTNIK_3';
+$more_common = 'MORE_PLUGINS_ADMIN_SPUTNIK_4';
 if (!defined($more_common)) {
 
- 	class more_plugins_admin_object_sputnik_3 {
+ 	class more_plugins_admin_object_sputnik_4 {
 		var $name, $slug, $settings_file, $dir, $options_url, $option_key, $data, $url;
 	
 		var $action, $navigation, $message, $error;
@@ -56,7 +86,7 @@ if (!defined($more_common)) {
 		**
 		**
 		*/
-		function more_plugins_admin_object_sputnik_3 ($settings) {
+		function more_plugins_admin_object_sputnik_4 ($settings) {
 
 			$this->name = $settings['name'];
 			$this->slug = sanitize_title($settings['name']);
@@ -189,9 +219,9 @@ if (!defined($more_common)) {
 			$k = $this->keys[1];
 			$a = str_replace('-', '_', $k);
 			$f = $function . '_saved_' . $a;
-			$j = json_encode($data);
+			$j = maybe_serialize($data);
 			$export = "<?php \nadd_filter('$filter', '$f');\n";
-			$export .= "function $f (\$d) {\$d['$k'] = json_decode('$j', true); return \$d; }\n?>";
+			$export .= "function $f (\$d) {\$d['$k'] = maybe_unserialize('$j', true); return \$d; }\n?>";
 			$filename = $a . '.php';
 			$dir = $this->dir . 'saved/';
 
@@ -274,7 +304,7 @@ if (!defined($more_common)) {
 			$fs = array('keys', 'action_keys');
 			foreach ($fs as $f) {
 				$a = attribute_escape($_GET[$f]);
-				$argh = $this->extract_json_array($a);
+				$argh = $this->extract_array($a);
 				$this->{$f} = $argh;
 			}
 
@@ -324,7 +354,7 @@ if (!defined($more_common)) {
 			if ($this->action == 'move') {
 			
 				// At what level are we moving?
-				$action_keys = $this->extract_json_array(attribute_escape($_GET['action_keys']));
+				$action_keys = $this->extract_array(attribute_escape($_GET['action_keys']));
 				if (empty($action_keys)) array_push($action_keys, '_plugin');
 				$data = $this->get_data($action_keys);
 
@@ -344,14 +374,14 @@ if (!defined($more_common)) {
 				
 			}
 			if ($this->action == 'save') {
-	
+
 				$arr = $this->extract_submission();
 				// The $_POST['index'] needs to be set externally, this is
 				// last index of the data to be saved 
 				$index = $arr['index'];
 				$keys  = $arr['originating_keys'];
 				$old_last_key = $keys[count($keys) - 1];
-				
+
 				// We can only save to '_plugin'
 				if ($keys[0] != '_plugin') {
 					$arr['ancestor_key'] = $keys[1];
@@ -414,53 +444,58 @@ if (!defined($more_common)) {
 			array_push($this->fields['var'], 'index');
 			array_push($this->fields['var'], 'ancestor_key');
 
-
 			// Ekkstrakkt
 			$arr = array();
-			foreach($this->fields['var'] as $field) 
-				$arr[$field] = attribute_escape($_POST[$field]);
+			foreach($this->fields['var'] as $field) {
+				$v = attribute_escape($_POST[$field]);
+				$arr[$field] = htmlspecialchars(stripslashes($v));
+			}
 			foreach($this->fields['array'] as $level1 => $field) {
 				if (!is_array($field)) {
-					$vals = $this->extract_json_array($_POST[$field]);
+					$vals = $this->extract_array($_POST[$field]);
 					foreach ($vals as $k => $v) {
-						if (!is_array($v) && !is_object($v)) 
-							$arr[$field][$k] = htmlentities(stripslashes($v));
-						else $arr[$field][$k] = $this->object_to_array($v);
+						if (!is_array($v) && !is_object($v)) {
+							$arr[$field][$k] = htmlspecialchars(stripslashes($v));
+						} else $arr[$field][$k] = $this->object_to_array($v);
 					}
 				} else {
 					foreach ($field as $level2 => $field2) {
-						$post = $this->extract_json_array($_POST[$level1 . ',' . $field2]);	
-						$arr[$level1][$field2] = htmlentities(stripslashes($post[0]));
+						$post = $this->extract_array($_POST[$level1 . ',' . $field2]);	
+						$arr[$level1][$field2] = htmlspecialchars(stripslashes($post[0]));
 					}
 				}
 			}
+
 			return $arr;
 		}
 
 		/*
-		**
-		**
+		** 	Might be storing serialized data or might be a 
+		**	comma separated list
 		*/
-		function extract_json_array($a) {
-			// *Might* be storing values as json objects
-			if (!is_array($a) && $a) {
-				if ($b = json_decode(html_entity_decode(stripslashes($a)))) {
-					// Json is JS object notation (!), convert to array.
-					if (is_object($b)) $b = $this->object_to_array($b);
-					$a = $b;
-				// If the data is not an array, make it one
-				} else if (strpos($a, ',')) {
-					$ret = array();
-					foreach(explode(',', $a) as $p) $ret[] = $p;
-					$a = $ret;
-				} else {
-					$a = array($a);
-				}
+		function extract_array($a) {
+			// *Might* be storing serialized data or *might* be a 
+			// comma separated list
+			
+			if (is_array($a)) return $a;
+			
+			if ($a) {
+
+				// Is $a seralized?
+				$b = maybe_unserialize(stripslashes($a));
+				if (is_object($b)) $b = $this->object_to_array($b);
+				if (is_array($b)) return $b;
+				
+				// Is this a comma separated list?
+				if (strpos($a, ',')) 
+					return explode(',', $a);
+				
+				// $a is just a single value		
+				return array($a);
 			}
-			//print_r($a);
-			// If there is no data in parameter, return empty
-			if (!$a) $a = array();
-			return $a;
+			
+			// $a is empty
+			return array();
 		}
 		
 		/*
@@ -890,7 +925,7 @@ if (!defined($more_common)) {
 		**
 		*/
 		function settings_input($name, $s = array()) {
-			$value = $this->get_val($name, $s);			
+			$value = $this->get_val($name, $s);
 			$html = "<input class='input-text' type='text' name='$name' value='$value'>";		
 			return $html;
 		}
@@ -917,7 +952,7 @@ if (!defined($more_common)) {
 		}
 		function settings_hidden($name) {
 			$value = $this->get_val($name);
-			if (is_array($value)) $value = json_encode($value);
+			$value = maybe_serialize($value);
 			$html = "<input type='hidden' name='$name' value='$value'>";
 			return $html;
 		}
@@ -944,7 +979,7 @@ if (!defined($more_common)) {
 		function checkbox_list($name, $vars, $options = array()) {
 			$values = (array) $this->get_val($name);
 			$html = '';
-			
+
 			foreach ($vars as $key => $val) {
 				// Options will over-ride values
 				$class = ($a = $options[$key]['class']) ? 'class="' . $a . '"' : '';
@@ -1054,7 +1089,7 @@ if (!defined($more_common)) {
 			return '<em>' . $comment . '</em>';
 		}
 		function settings_save_button() {
-			$keys = implode(',', $this->keys);
+			$keys = implode(',', (array) $this->keys);
 		?>
 			<input type="hidden" name='ancestor_key' value='<?php echo $this->get_val("ancestor_key"); ?>' />
 			<input type="hidden" name='originating_keys' value='<?php echo $keys; ?>' />

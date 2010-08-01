@@ -25,13 +25,13 @@
 **
 */
 
-$more_plugins = 'MORE_PLUGINS_SPUTNIK_3';
+$more_plugins = 'MORE_PLUGINS_SPUTNIK_4';
 if (!defined($more_plugins)) {
 	
-	class more_plugins_object_sputnik_3 {
+	class more_plugins_object_sputnik_4 {
 	
 	
-		function more_plugins_object_sputnik_3($settings) {
+		function more_plugins_object_sputnik_4($settings) {
 			$this->settings = $settings;
 			$this->slug = sanitize_title($settings['name']);
 			$this->init($settings);
