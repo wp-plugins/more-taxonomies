@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: More Taxonomies
-Version: 1.0.1
+Version: 1.1
 Author URI: http://labs.dagensskiva.com/
 Plugin URI: http://labs.dagensskiva.com/plugins/more-taxonomies/
 Description:  Add more taxonomies to your WordPress installation. You can use taxonomies to label and categorize your posts/pages.

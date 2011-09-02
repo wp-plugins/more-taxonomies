@@ -1,7 +1,7 @@
 <?php
 /*
 	MORE_PLUGINS_ADMIN_OBJECT
-	SPUTNIK Release #4
+	SPUTNIK Release #7
 	
 	This plugin compontent is common for all More Plugins (see more-plugins.se for 
 	more information about these plugins) and does most of all the heavy lifting 
@@ -18,7 +18,7 @@
 	
 	DATA LAYOUT
 	===========
-	1. 	There is onlye one data array contains all the data (per plugin). Within this 
+	1. 	There is only one data array contains all the data (per plugin). Within this 
 		array, there are 4 types of data, each with their own key.
 		- ${data}['_plugin']
 			This is the data actually stored in the options table in the WP data-base
@@ -57,7 +57,7 @@
 		which will seralize any array data.
 	
 
-	Copyright (C) 2010  Henrik Melin, Kal Ström
+	Copyright (C) 2010  Henrik Melin, Kal Strm
 	
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -75,18 +75,18 @@
 
 */
 
-$more_common = 'MORE_PLUGINS_ADMIN_SPUTNIK_4';
+$more_common = 'MORE_PLUGINS_ADMIN_SPUTNIK_8';
 if (!defined($more_common)) {
 
- 	class more_plugins_admin_object_sputnik_4 {
-		var $name, $slug, $settings_file, $dir, $options_url, $option_key, $data, $url;
+ 	class more_plugins_admin_object_sputnik_8 {
+		var $name, $slug, $settings_file, $dir, $options_url, $option_key, $data, $url, $keys;
 	
-		var $action, $navigation, $message, $error;
+		var $action, $navigation, $message, $error, $headed, $footed;
 		/*
 		**
 		**
 		*/
-		function more_plugins_admin_object_sputnik_4 ($settings) {
+		function more_plugins_admin_object_sputnik_8 ($settings) {
 
 			$this->name = $settings['name'];
 			$this->slug = sanitize_title($settings['name']);
@@ -126,6 +126,8 @@ if (!defined($more_common)) {
 			$this->add_actions();
 
 			$this->add_key = '57UPhPh';
+
+			
 
 			// $this->data = $this->read_data();
 		}
@@ -167,8 +169,8 @@ if (!defined($more_common)) {
 		function plugin_row_meta ($links, $file) {
 			if (strpos('padding' . $file, $this->slug)) {
 				$links[] = '<a href="' . $this->settings_url . '">' . __('Settings','more-plugins') . '</a>';
-				$links[] = '<a href="http://labs.dagensskiva.com/forum/forum/' . $this->slug . '/">' . __('Support','more-plugins') . '</a>';
-				$links[] = '<a href="http://labs.dagensskiva.com/donate/">' . __('Donate','sitemap') . '</a>';
+				$links[] = '<a href="http://more-plugins.se/forum/forum/' . $this->slug . '/">' . __('Support','more-plugins') . '</a>';
+				$links[] = '<a href="http://more-plugins.se/donate/">' . __('Donate','sitemap') . '</a>';
 			}
 			return $links;
 		}
@@ -178,7 +180,7 @@ if (!defined($more_common)) {
 		**
 		*/
 		function admin_menu () {
-			add_options_page($this->name, $this->name, 8, $this->slug, array(&$this, 'options_page'));
+			add_options_page($this->name, $this->name, 'edit_pages', $this->slug, array(&$this, 'options_page'));
 		}
 		
 		/*
@@ -187,6 +189,20 @@ if (!defined($more_common)) {
 		*/
 		function admin_head () {
 			add_thickbox();
+			?>
+			<script type="text/javascript">
+			/* <![CDATA[ */
+				(function() {
+					var s = document.createElement('script'), t = document.getElementsByTagName('script')[0];
+					s.type = 'text/javascript';
+					s.async = true;
+					s.src = 'http://api.flattr.com/js/0.6/load.js?mode=auto';
+					t.parentNode.insertBefore(s, t);
+				})();
+			/* ]]> */
+			</script>
+			
+			<?php
 		
 		}
 		
@@ -284,7 +300,7 @@ if (!defined($more_common)) {
 			if (empty($s)) $s = $this->keys;
 			$key = array_pop($s);
 			$arr = $this->get_data($s, true);
-			if ($arr[$key]) unset($arr[$key]);
+			if (array_key_exists($key, $arr)) unset($arr[$key]);
 			$this->set_data($arr, $s, true);
 			return $this->data;
 		}
@@ -298,12 +314,13 @@ if (!defined($more_common)) {
 
 			// Single vars
 			$fs = array('action', 'navigation');
-			foreach ($fs as $f) $this->{$f} = attribute_escape($_GET[$f]);
+			foreach ($fs as $f) if (array_key_exists($f, $_GET)) $this->{$f} = esc_attr($_GET[$f]);
 
 			// Array vars
 			$fs = array('keys', 'action_keys');
 			foreach ($fs as $f) {
-				$a = attribute_escape($_GET[$f]);
+				if (!array_key_exists($f, $_GET)) continue;
+				$a = esc_attr($_GET[$f]);
 				$argh = $this->extract_array($a);
 				$this->{$f} = $argh;
 			}
@@ -330,8 +347,9 @@ if (!defined($more_common)) {
 			$this->load_objects();
 		
 			// Ponce som en lugercheck!
-			if ($nonce = attribute_escape($_GET['_wpnonce']))
-				check_admin_referer($this->nonce_action());
+			if (array_key_exists('_wpnonce', $_GET))
+				if ($nonce = esc_attr($_GET['_wpnonce']))
+					check_admin_referer($this->nonce_action());
 
 			// Check whatever you want - validate_submission should return false if 
 			// things don't stack up. 
@@ -354,7 +372,7 @@ if (!defined($more_common)) {
 			if ($this->action == 'move') {
 			
 				// At what level are we moving?
-				$action_keys = $this->extract_array(attribute_escape($_GET['action_keys']));
+				$action_keys = $this->extract_array(esc_attr($_GET['action_keys']));
 				if (empty($action_keys)) array_push($action_keys, '_plugin');
 				$data = $this->get_data($action_keys);
 
@@ -362,10 +380,10 @@ if (!defined($more_common)) {
 					return $this->error(__('Someting has gone awry. Sorry.', 'more-plugins'));
 				
 				// Which element is being moved?
-				$row = attribute_escape($_GET['row']);
+				$row = esc_attr($_GET['row']);
 
 				// Move a key
-				$up = ('up' == attribute_escape($_GET['direction'])) ? true : false;
+				$up = ('up' == esc_attr($_GET['direction'])) ? true : false;
 				$data = $this->move_field($data, $row, $up);
 
 				// Save the data
@@ -446,22 +464,32 @@ if (!defined($more_common)) {
 
 			// Ekkstrakkt
 			$arr = array();
-			foreach($this->fields['var'] as $field) {
-				$v = attribute_escape($_POST[$field]);
-				$arr[$field] = htmlspecialchars(stripslashes($v));
+			foreach($this->fields['var'] as $key => $field) {
+				if (!is_array($field)) {
+					$v = (array_key_exists($field, $_POST)) ? esc_attr($_POST[$field]) : '';
+					$arr[$field] = (stripslashes($v));
+				} else {
+					foreach ($field as $f) {
+						if (array_key_exists($key . ',' . $f, $_POST))
+							$arr[$key][$f] = $_POST[$key . ',' . $f];
+					
+					}				
+				}
 			}
 			foreach($this->fields['array'] as $level1 => $field) {
 				if (!is_array($field)) {
-					$vals = $this->extract_array($_POST[$field]);
+					$vals = (array_key_exists($field, $_POST)) ? $this->extract_array($_POST[$field]) : array();
 					foreach ($vals as $k => $v) {
 						if (!is_array($v) && !is_object($v)) {
-							$arr[$field][$k] = htmlspecialchars(stripslashes($v));
+							$arr[$field][$k] = (stripslashes($v));
 						} else $arr[$field][$k] = $this->object_to_array($v);
 					}
 				} else {
 					foreach ($field as $level2 => $field2) {
-						$post = $this->extract_array($_POST[$level1 . ',' . $field2]);	
-						$arr[$level1][$field2] = htmlspecialchars(stripslashes($post[0]));
+						if (array_key_exists($level1 . ',' . $field2, $_POST)) {
+							$post = $this->extract_array($_POST[$level1 . ',' . $field2]);
+							if (!empty($post)) $arr[$level1][$field2] = (stripslashes($post[0]));
+						}
 					}
 				}
 			}
@@ -474,18 +502,17 @@ if (!defined($more_common)) {
 		**	comma separated list
 		*/
 		function extract_array($a) {
-			// *Might* be storing serialized data or *might* be a 
+			// *Might* be storing json data or *might* be a 
 			// comma separated list
 			
 			if (is_array($a)) return $a;
 			
 			if ($a) {
 
-				// Is $a seralized?
-				$b = maybe_unserialize(stripslashes($a));
-				if (is_object($b)) $b = $this->object_to_array($b);
-				if (is_array($b)) return $b;
-				
+				// $a be a json object
+				$b = json_decode(stripslashes_deep($a), true);
+				if (is_array($b)) return $this->slasherize($b, true);
+								
 				// Is this a comma separated list?
 				if (strpos($a, ',')) 
 					return explode(',', $a);
@@ -526,7 +553,7 @@ if (!defined($more_common)) {
 		**
 		*/		
 		function get_index($key) {
-			$val = attribute_escape($_POST[$key]);
+			$val = esc_attr($_POST[$key]);
 			$val = sanitize_title($val);
 			$val = str_replace('-', '_', $val);
 			return $val;		
@@ -601,10 +628,15 @@ if (!defined($more_common)) {
 								<div class="inside">
 								
 									<ul>
-										<li><a href="http://labs.dagensskiva.com/plugins/<?php echo $this->slug; ?>/">Plugin homepage</a></li>
-										<li><a href="http://labs.dagensskiva.com/forum/">Plugin support forum</a></li>
+										<li><a href="http://more-plugins.se/plugins/<?php echo $this->slug; ?>/">Plugin homepage</a></li>
+										<li><a href="http://more-plugins.se/forum/">Plugin support forum</a></li>
 										<li><a href="http://wordpress.org/tags/<?php echo $this->slug; ?>?forum_id=10">Wordpress Forum</a></li>
 										<li><a href="https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&#38;business=h.melin%40gmail.com&#38;item_name=<?php echo str_replace(' ', '%20', $this->name); ?>%20Plugin&#38;no_shipping=0&#38;no_note=1&#38;tax=0&#38;currency_code=USD&#38;bn=PP%2dDonationsBF&#38;charset=UTF%2d8&#38;lc=US">Donate with PayPal</a></li>
+										<li>
+											<a class="FlattrButton" style="display:none;" href="http://more-plugins.se/plugins/more-fields/"></a>
+											<noscript><a href="http://flattr.com/thing/386416/More-Plugins" target="_blank">
+											<img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a></noscript>										</li>
+
 									</ul>
 							
 								</div>
@@ -784,8 +816,8 @@ if (!defined($more_common)) {
 			if (!empty($args)) $link = array_merge($link, $args);
 
 			// Build the links
-			if ($nbr > 0) $html .= ' | ' . $this->settings_link('&uarr', array_merge($link, array('direction' => 'up')));
-			if ($nbr < $total - 1) $html .= ' | ' . $this->settings_link('&darr', array_merge($link, array('direction' => 'down')));
+			if ($nbr > 0) $html .= ' | ' . $this->settings_link('&uarr;', array_merge($link, array('direction' => 'up')));
+			if ($nbr < $total - 1) $html .= ' | ' . $this->settings_link('&darr;', array_merge($link, array('direction' => 'down')));
 			return $html;
 		}
 		
@@ -802,7 +834,8 @@ if (!defined($more_common)) {
 				$link .= '&' . $key . '=' . urlencode($value);
 			}
 			$link = wp_nonce_url($link, $this->nonce_action($args));
-			$class = ($c = $args['class']) ? $c : 'more-common';
+			$argcl = (array_key_exists('class', $args)) ? $args['class'] : 0;
+			$class = ($c = $argcl) ? $c : 'more-common';
 			$html = "<a class='$class' href='$link'>$text</a>";
 			if (!$text) return $link;
 			return $html;
@@ -817,8 +850,10 @@ if (!defined($more_common)) {
 			if (empty($args)) $args = $_GET;
 
 			$action = $this->slug . '-action_';
-			if ($a = attribute_escape($args['navigation'])) $action .= $a;			
-			if ($a = attribute_escape($args['action'])) $action .= $a;
+			if (array_key_exists('navigation', $args)) 
+				if ($a = esc_attr($args['navigation'])) $action .= $a;			
+			if (array_key_exists('action', $args)) 
+				if ($a = esc_attr($args['action'])) $action .= $a;
 
 			return $action;		
 		}
@@ -913,8 +948,10 @@ if (!defined($more_common)) {
 			// Iterate through the data
 			$subdata = $this->data;
 			foreach ($s as $key) {
-				$subdata = $subdata[$key];
+				if (array_key_exists($key, $subdata)) $subdata = $subdata[$key];
+				else $subdata = '';
 			}
+//__d($name);
 			if (!is_array($subdata)) $subdata = stripslashes($subdata);
 			return $subdata;
 		
@@ -925,8 +962,8 @@ if (!defined($more_common)) {
 		**
 		*/
 		function settings_input($name, $s = array()) {
-			$value = $this->get_val($name, $s);
-			$html = "<input class='input-text' type='text' name='$name' value='$value'>";		
+			$value = esc_attr($this->get_val($name, $s));
+			$html = '<input class="input-text" type="text" name="' . $name . '" value="' . $value . '">';		
 			return $html;
 		}
 
@@ -946,17 +983,26 @@ if (!defined($more_common)) {
 			foreach ($vars as $key => $value) {
 				$checked = ($key == $set) ? ' checked="checked"' : '';
 				$html .= "<label><input class='input-radio' type='radio' name='$name' value='$key' $checked /> $value</label> ";		
-					if ($c = $comments[$key]) $html .= $this->format_comment($c);
+					if (array_key_exists($key, $comments)) if ($c = $comments[$key]) $html .= $this->format_comment($c);
 			}
 			return $html;
 		}
-		function settings_hidden($name) {
-			$value = $this->get_val($name);
-			$value = maybe_serialize($value);
+		function settings_hidden($name, $var = 0) {
+			if (!$var) $var = $this->get_val($name);
+			$value = ($var) ? json_encode($this->slasherize($var)) : '';
 			$html = "<input type='hidden' name='$name' value='$value'>";
 			return $html;
 		}
-
+		function slasherize ($var, $strip = false) {		
+			$ret = array();
+			$word = '2ew8dhpf7f3';
+			foreach ($var as $k => $v) {
+				if (!$strip) $ret[$k] = (is_array($v)) ? $this->slasherize($v) :  str_replace(array('"', "'"), array($word, strrev($word)), stripslashes_deep(htmlspecialchars_decode($v)));
+				else $ret[$k] = (is_array($v)) ? $this->slasherize($v, true) :  str_replace(array($word, strrev($word)), array('"', "'"), $v);
+			}
+			return $ret;
+		}
+	
 		/*
 		**
 		**
@@ -982,15 +1028,21 @@ if (!defined($more_common)) {
 
 			foreach ($vars as $key => $val) {
 				// Options will over-ride values
-				$class = ($a = $options[$key]['class']) ? 'class="' . $a . '"' : '';
-				$readonly = ($options[$key]['disabled']) ? ' disabled="disabled"' : '';
+//				$okc = (array_key_exists('class', $options[$key])) ? $options[$key]['class'] : 0;
+				$ok = (array_key_exists($key, $options)) ? $options[$key] : array();
+				$okc = (array_key_exists('class', $ok)) ? $ok['class'] : '';
+				$class = ($a = $okc) ? 'class="' . $a . '"' : '';
+				$okc = (array_key_exists('disabled', $ok)) ? $ok['disabled'] : '';
+				$readonly = ($okc) ? ' disabled="disabled"' : '';
 				
-				if (array_key_exists('value', (array) $options[$key]))
+				
+				if (array_key_exists('value', $ok))
 					$checked = ($options[$key]['value']) ? ' checked="checked" ' : '';
 				else $checked = (in_array($key, $values)) ? ' checked="checked"' : '';
 				
 				$html .= "<label><input class='input-check' type='checkbox' value='$key' name='${name}[]' $class $readonly $checked /> $val</label>";
-				if ($t = $options[$key]['text']) $html .= '<em>' . $t . '</em>';
+				$okc = (array_key_exists('text', $ok)) ? $ok['text'] : '';
+				if ($t = $okc) $html .= '<em>' . $t . '</em>';
 			}
 		//	$html .= '<input type="hidden" name="' . $name . '_values" value="' . implode(',', array_keys($vars)) . '">';
 			return $html;		
@@ -1121,11 +1173,12 @@ if (!defined($more_common)) {
 		}
 	} // end class
 
+	load_plugin_textdomain( 'more-plugins', false, dirname( plugin_basename( __FILE__ ) ) );
 
+	define($more_common, true);
 
 } // endif defined
 
-define($more_common, true);
 
 if (!is_callable('__d')) {
 	function __d($d) {

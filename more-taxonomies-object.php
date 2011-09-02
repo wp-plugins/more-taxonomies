@@ -1,7 +1,7 @@
 <?php
 
 
-class more_taxonomies_object extends more_plugins_object_sputnik_4 {
+class more_taxonomies_object extends more_plugins_object_sputnik_8 {
 	
 	var $settings;
 
@@ -74,9 +74,10 @@ class more_taxonomies_object extends more_plugins_object_sputnik_4 {
 					$taxonomy[$cap_key] = $capability;
 
 				// Add capability!
-				foreach ((array) $taxonomy['more_' . $cap_key] as $role) 
-					if (is_object($wp_roles))
-						$wp_roles->add_cap($role, $capability);
+				if (array_key_exists('more_' . $cap_key, $taxonomy))
+					foreach ((array) $taxonomy['more_' . $cap_key] as $role) 
+						if (is_object($wp_roles))
+							$wp_roles->add_cap($role, $capability);
 			}	
 		
 		

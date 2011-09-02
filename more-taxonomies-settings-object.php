@@ -1,12 +1,12 @@
 <?php
 
-class more_taxonomies_admin extends more_plugins_admin_object_sputnik_4 {
+class more_taxonomies_admin extends more_plugins_admin_object_sputnik_8 {
 
 	function validate_sumbission() {
 		if ($this->action == 'save') {
 				
-			$a = attribute_escape($_POST['labels,name']);
-			$b = attribute_escape($_POST['labels,singular_name']);
+			$a = esc_attr($_POST['labels,name']);
+			$b = esc_attr($_POST['labels,singular_name']);
 			if (!$a && !$b) {
 				$this->set_navigation('taxonomy');
 				return $this->error(__('You need both a plural and singular label for the taxonomy!', 'more-plugins')); 

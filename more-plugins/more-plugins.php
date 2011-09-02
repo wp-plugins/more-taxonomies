@@ -3,7 +3,7 @@
 /*
 **
 
-	This is the common object that all More Plugins. 
+	This is the common object that all More Plugins utilize. 
 
 
 	Copyright (C) 2010  Henrik Melin, Kal Ström
@@ -25,13 +25,13 @@
 **
 */
 
-$more_plugins = 'MORE_PLUGINS_SPUTNIK_4';
+$more_plugins = 'MORE_PLUGINS_SPUTNIK_8';
 if (!defined($more_plugins)) {
 	
-	class more_plugins_object_sputnik_4 {
+	class more_plugins_object_sputnik_8 {
 	
 	
-		function more_plugins_object_sputnik_4($settings) {
+		function more_plugins_object_sputnik_8($settings) {
 			$this->settings = $settings;
 			$this->slug = sanitize_title($settings['name']);
 			$this->init($settings);
@@ -93,8 +93,10 @@ if (!defined($more_plugins)) {
 			if (!empty($keys)) {
 				$ret = array();
 				foreach ($keys as $key) {
-					foreach ((array) $this->data_loaded[$key] as $name => $var) {					
-						$ret[$name] = $this->data_loaded[$key][$name];
+					if (array_key_exists($key, $this->data_loaded)) {
+						foreach ((array) $this->data_loaded[$key] as $name => $var) {					
+							$ret[$name] = $this->data_loaded[$key][$name];
+						}
 					}
 				}
 				return $ret;	
@@ -128,10 +130,12 @@ if (!defined($more_plugins)) {
 			if (!$data['_default']) $data['_default'] = array();
 
 			$this->data_loaded = $data;
+
 			return $data;
 		
 		}
 		function saved_data() {
+			$saved = '';
 			return apply_filters($this->filter, $saved);
 
 			$saved = array();
@@ -162,14 +166,22 @@ if (!defined($more_plugins)) {
 		function populate ($page, $options = array()) {
 
 			// These are the single value variables
-			foreach ((array) $this->settings['fields']['var'] as $field)
-				if (array_key_exists($field, (array) $page)) 
-					$options[$field] = $page[$field];
-				else $options[$field] = false;
+			foreach ((array) $this->settings['fields']['var'] as $key => $field) {
+				if (!is_array($field)) {
+					if (array_key_exists($field, (array) $page)) 
+						$options[$field] = $page[$field];
+					else $options[$field] = false;
+				} else {
+					foreach ($field as $f)
+						if (array_key_exists($key, $page))
+							if (array_key_exists($f, (array) $page[$key])) 
+								$options[$key][$f] = $page[$key][$f];
+								__d ($page[$key][$f]);
+				}				
+			}
 				
 			// Arrays, may be associative
-			foreach ((array) $this->settings['fields']['array'] as $k => $f) {	
-
+			foreach ((array) $this->settings['fields']['array'] as $k => $f) {
 				if (!is_array($f)) {
 					 if (array_key_exists($f, (array) $page)) 
 					 	$options[$f] = $page[$f];
@@ -189,6 +201,8 @@ if (!defined($more_plugins)) {
 	
 	
 	}
+
+	define($more_plugins, true);
 }
 
 if (!is_callable('__d')) {
@@ -201,7 +215,6 @@ if (!is_callable('__d')) {
 	}
 }
 
-define($more_plugins, true);
 
 
 ?>

@@ -189,7 +189,7 @@ if (!$this->navigation || $this->navigation == 'taxonomies') {
 		$types = $more_taxonomies_settings->get_post_types();
 		$options = array();
 		if (is_object($more_types_settings)) {
-			$link = $more_types_settings->settings['options_url'];
+			$link = (method_exists($more_types_settings, 'settings')) ? $more_types_settings->settings['options_url'] : 'options-general.php';
 			$text = __("If you want to use this taxonomy for this post type you need to import it using <a href='$link'>More Types</a>.", 'more-plugins');
 			if (is_callable(array($more_types_settings, 'list_post_type_with_key')))
 				$options = $more_types_settings->list_post_type_with_key('taxonomies', $id, $text);
