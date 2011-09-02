@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: More Taxonomies
-Version: 1.0
+Version: 1.1
 Author URI: http://labs.dagensskiva.com/
 Plugin URI: http://labs.dagensskiva.com/plugins/more-taxonomies/
 Description:  Add more taxonomies to your WordPress installation. You can use taxonomies to label and categorize your posts/pages.
@@ -56,8 +56,8 @@ $default = array(
 			'add_or_remove_items' => __('Add or Remove', 'more-plugins'),
 			'choose_from_most_used' => __('Choose from the most commonly used', 'more-plugins')
 		),
-
 );
+
 $default_keys = array('post_tag', 'category', 'link_category', 'nav_menu');
 $settings = array(
 		'name' => 'More Taxonomies', 
